@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Base emerald diamond -->
+    <path
+        android:fillColor="#00C853"
+        android:pathData="M54,6 L6,54 L54,102 L102,54 Z" />
+    <!-- Top highlight -->
+    <path
+        android:fillColor="#1DE9B6"
+        android:pathData="M54,6 L54,54 L102,54 Z" />
+    <!-- Right shade -->
+    <path
+        android:fillColor="#00BFA5"
+        android:pathData="M54,54 L54,102 L102,54 Z" />
+    <!-- Left shade -->
+    <path
+        android:fillColor="#009624"
+        android:pathData="M6,54 L54,54 L54,102 Z" />
+    <!-- Inner facet -->
+    <path
+        android:fillColor="#A5D6A7"
+        android:fillAlpha="0.6"
+        android:pathData="M30,54 L54,30 L78,54 L54,78 Z" />
+</vector>
+
