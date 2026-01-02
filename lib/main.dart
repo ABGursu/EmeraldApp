@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 
 import 'data/local_db/database_helper.dart';
 import 'ui/screens/balance/balance_screen.dart';
-import 'ui/screens/exercise/exercise_history_screen.dart';
+import 'ui/screens/exercise/exercise_log_screen.dart';
 import 'ui/screens/habit/habit_hub_screen.dart';
 import 'ui/screens/supplement/supplement_hub_screen.dart';
+import 'ui/providers/date_provider.dart';
 import 'ui/viewmodels/balance_view_model.dart';
-import 'ui/viewmodels/exercise_view_model.dart';
+import 'ui/viewmodels/daily_log_view_model.dart';
+import 'ui/viewmodels/exercise_library_view_model.dart';
 import 'ui/viewmodels/habit_view_model.dart';
 import 'ui/viewmodels/supplement_view_model.dart';
 
@@ -24,17 +26,28 @@ class PersonalLoggerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // Central Date Provider (shared by Exercise and Habit modules)
+        ChangeNotifierProvider(
+          create: (_) => DateProvider(),
+        ),
         ChangeNotifierProvider(
           create: (_) => BalanceViewModel()..init(),
         ),
         ChangeNotifierProvider(
-          create: (_) => ExerciseViewModel()..init(),
+          create: (_) => ExerciseLibraryViewModel()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => DailyLogViewModel(
+            dateProvider: context.read<DateProvider>(),
+          )..init(),
         ),
         ChangeNotifierProvider(
           create: (_) => SupplementViewModel()..init(),
         ),
         ChangeNotifierProvider(
-          create: (_) => HabitViewModel()..init(),
+          create: (context) => HabitViewModel(
+            dateProvider: context.read<DateProvider>(),
+          )..init(),
         ),
       ],
       child: MaterialApp(
@@ -123,7 +136,7 @@ class MainMenuScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const ExerciseHistoryScreen(),
+                  builder: (_) => const ExerciseLogScreen(),
                 ),
               );
             },

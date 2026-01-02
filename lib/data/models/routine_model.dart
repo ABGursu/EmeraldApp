@@ -1,20 +1,20 @@
-class RoutineModel {
-  final String id;
+class Routine {
+  final int id;
   final String name;
   final DateTime createdAt;
 
-  const RoutineModel({
+  const Routine({
     required this.id,
     required this.name,
     required this.createdAt,
   });
 
-  RoutineModel copyWith({
-    String? id,
+  Routine copyWith({
+    int? id,
     String? name,
     DateTime? createdAt,
   }) {
-    return RoutineModel(
+    return Routine(
       id: id ?? this.id,
       name: name ?? this.name,
       createdAt: createdAt ?? this.createdAt,
@@ -27,9 +27,9 @@ class RoutineModel {
         'created_at': createdAt.millisecondsSinceEpoch,
       };
 
-  factory RoutineModel.fromMap(Map<String, dynamic> map) {
-    return RoutineModel(
-      id: map['id'] as String,
+  factory Routine.fromMap(Map<String, dynamic> map) {
+    return Routine(
+      id: map['id'] as int,
       name: map['name'] as String,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );

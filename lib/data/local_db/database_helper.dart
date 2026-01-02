@@ -1,9 +1,11 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'hardcoded_routines.dart';
+
 class DatabaseHelper {
   static const String _dbName = 'personal_logger.db';
-  static const int _dbVersion = 5;
+  static const int _dbVersion = 11;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -52,63 +54,6 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE exercise_dictionary(
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        muscle_group TEXT,
-        color_value INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE workout_sessions(
-        id TEXT PRIMARY KEY,
-        date INTEGER NOT NULL,
-        user_weight REAL,
-        user_fat REAL,
-        measurements TEXT,
-        note TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE workout_entries(
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        exercise_id TEXT NOT NULL,
-        sets INTEGER NOT NULL,
-        reps INTEGER NOT NULL,
-        weight REAL,
-        note TEXT,
-        FOREIGN KEY(session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
-        FOREIGN KEY(exercise_id) REFERENCES exercise_dictionary(id) ON DELETE CASCADE
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE routines(
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE routine_items(
-        id TEXT PRIMARY KEY,
-        routine_id TEXT NOT NULL,
-        exercise_id TEXT NOT NULL,
-        sets INTEGER NOT NULL,
-        reps INTEGER NOT NULL,
-        weight REAL,
-        note TEXT,
-        FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
-        FOREIGN KEY(exercise_id) REFERENCES exercise_dictionary(id) ON DELETE CASCADE
-      )
-    ''');
-
-    await db.execute('''
       CREATE TABLE budget_goals(
         id TEXT PRIMARY KEY,
         month_year TEXT NOT NULL UNIQUE,
@@ -122,6 +67,11 @@ class DatabaseHelper {
 
     // Habit & Goal Module Tables (v5)
     await _createHabitTables(db);
+
+    // Exercise Logger Module Tables (v8 structure)
+    await _createExerciseLoggerTablesV8(db);
+    await _seedExerciseDefinitions(db);
+    await _seedHardcodedRoutines(db);
   }
 
   Future<void> _createSupplementTables(Database db) async {
@@ -488,30 +438,151 @@ class DatabaseHelper {
     ''');
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS routines(
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          created_at INTEGER NOT NULL
-        )
-      ''');
+  Future<void> _createExerciseLoggerTables(Database db) async {
+    // A. Exercise Logs (New simplified structure)
+    await db.execute('''
+      CREATE TABLE exercise_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date INTEGER NOT NULL,
+        movement_type TEXT,
+        movement_name TEXT NOT NULL,
+        sets INTEGER NOT NULL,
+        reps INTEGER NOT NULL,
+        weight REAL,
+        workout_notes TEXT
+      )
+    ''');
 
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS routine_items(
-          id TEXT PRIMARY KEY,
-          routine_id TEXT NOT NULL,
-          exercise_id TEXT NOT NULL,
-          sets INTEGER NOT NULL,
-          reps INTEGER NOT NULL,
-          weight REAL,
-          note TEXT,
-          FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
-          FOREIGN KEY(exercise_id) REFERENCES exercise_dictionary(id) ON DELETE CASCADE
-        )
-      ''');
+    // B. User Stats (Current user statistics)
+    await db.execute('''
+      CREATE TABLE user_stats(
+        id INTEGER PRIMARY KEY,
+        weight REAL,
+        fat REAL,
+        measurements TEXT,
+        style TEXT,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    // C. Movement Types (Dynamic types for autocomplete)
+    await db.execute('''
+      CREATE TABLE movement_types(
+        name TEXT PRIMARY KEY
+      )
+    ''');
+
+    // Insert default user stats row
+    await db.insert('user_stats', {
+      'id': 1,
+      'weight': null,
+      'fat': null,
+      'measurements': null,
+      'style': null,
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    });
+
+    // Insert some default movement types
+    final defaultTypes = ['BW', 'Dumbbell', 'Cable', 'Barbell', 'Machine'];
+    for (final type in defaultTypes) {
+      await db.insert('movement_types', {'name': type});
     }
+  }
+
+  Future<void> _createExerciseLoggerTablesV8(Database db) async {
+    // A. Exercise Definitions (Egzersiz Havuzu)
+    await db.execute('''
+      CREATE TABLE exercise_definitions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        default_type TEXT,
+        body_part TEXT
+      )
+    ''');
+
+    // B. Routines (Şablonlar)
+    await db.execute('''
+      CREATE TABLE routines(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    // C. Routine Items (Şablon İçerikleri)
+    await db.execute('''
+      CREATE TABLE routine_items(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        routine_id INTEGER NOT NULL,
+        exercise_definition_id INTEGER NOT NULL,
+        target_sets INTEGER NOT NULL,
+        target_reps INTEGER NOT NULL,
+        order_index INTEGER NOT NULL,
+        FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
+        FOREIGN KEY(exercise_definition_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // D. Workout Logs (Günlük Kayıtlar)
+    await db.execute('''
+      CREATE TABLE workout_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date INTEGER NOT NULL,
+        exercise_name TEXT NOT NULL,
+        exercise_type TEXT,
+        sets INTEGER NOT NULL,
+        reps INTEGER NOT NULL,
+        weight REAL,
+        note TEXT,
+        order_index INTEGER NOT NULL,
+        is_completed INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // E. User Stats (Current user statistics)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS user_stats(
+        id INTEGER PRIMARY KEY,
+        weight REAL,
+        fat REAL,
+        measurements TEXT,
+        style TEXT,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    // F. Movement Types (Dynamic types for autocomplete)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS movement_types(
+        name TEXT PRIMARY KEY
+      )
+    ''');
+
+    // Insert default user stats row if not exists
+    final existingStats =
+        await db.query('user_stats', where: 'id = ?', whereArgs: [1]);
+    if (existingStats.isEmpty) {
+      await db.insert('user_stats', {
+        'id': 1,
+        'weight': null,
+        'fat': null,
+        'measurements': null,
+        'style': null,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      });
+    }
+
+    // Insert some default movement types if not exists
+    final existingTypes = await db.query('movement_types');
+    if (existingTypes.isEmpty) {
+      final defaultTypes = ['BW', 'Dumbbell', 'Cable', 'Barbell', 'Machine'];
+      for (final type in defaultTypes) {
+        await db.insert('movement_types', {'name': type});
+      }
+    }
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS budget_goals(
@@ -529,6 +600,495 @@ class DatabaseHelper {
     if (oldVersion < 5) {
       // Add habit & goal module tables
       await _createHabitTables(db);
+    }
+    if (oldVersion < 6) {
+      // Add exercise logger module tables (new simplified structure)
+      await _createExerciseLoggerTables(db);
+    }
+    if (oldVersion < 7) {
+      // Remove old exercise logger tables (workout_sessions, workout_entries, exercise_dictionary, routines, routine_items)
+      await db.execute('DROP TABLE IF EXISTS routine_items');
+      await db.execute('DROP TABLE IF EXISTS routines');
+      await db.execute('DROP TABLE IF EXISTS workout_entries');
+      await db.execute('DROP TABLE IF EXISTS workout_sessions');
+      await db.execute('DROP TABLE IF EXISTS exercise_dictionary');
+    }
+    if (oldVersion < 8) {
+      // Migrate to new structure: exercise_definitions, routines, routine_items, workout_logs
+      // Create new tables
+      await _createExerciseLoggerTablesV8(db);
+
+      // Migrate data from exercise_logs to workout_logs if exists
+      try {
+        final oldLogs = await db.query('exercise_logs');
+        for (final oldLog in oldLogs) {
+          await db.insert('workout_logs', {
+            'date': oldLog['date'],
+            'exercise_name': oldLog['movement_name'],
+            'exercise_type': oldLog['movement_type'],
+            'sets': oldLog['sets'],
+            'reps': oldLog['reps'],
+            'weight': oldLog['weight'],
+            'order_index': oldLog['id'], // Use old id as order_index
+            'is_completed': 0,
+          });
+        }
+        // Drop old table after migration
+        await db.execute('DROP TABLE IF EXISTS exercise_logs');
+      } catch (e) {
+        // If exercise_logs doesn't exist, just continue
+      }
+    }
+    if (oldVersion < 9) {
+      // Add body_part to exercise_definitions
+      try {
+        await db.execute(
+            'ALTER TABLE exercise_definitions ADD COLUMN body_part TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+
+      // Add note to workout_logs
+      try {
+        await db.execute('ALTER TABLE workout_logs ADD COLUMN note TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+
+      // Migrate routine_items to use exercise_definition_id
+      try {
+        // Create new table structure
+        await db.execute('''
+          CREATE TABLE routine_items_new(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            routine_id INTEGER NOT NULL,
+            exercise_definition_id INTEGER NOT NULL,
+            target_sets INTEGER NOT NULL,
+            target_reps INTEGER NOT NULL,
+            order_index INTEGER NOT NULL,
+            FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
+            FOREIGN KEY(exercise_definition_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Try to migrate existing data (if exercise_name matches exercise_definitions.name)
+        try {
+          final oldItems = await db.query('routine_items');
+          for (final item in oldItems) {
+            final exerciseName = item['exercise_name'] as String?;
+            if (exerciseName != null) {
+              final exerciseDef = await db.query(
+                'exercise_definitions',
+                where: 'name = ?',
+                whereArgs: [exerciseName],
+                limit: 1,
+              );
+              if (exerciseDef.isNotEmpty) {
+                await db.insert('routine_items_new', {
+                  'routine_id': item['routine_id'],
+                  'exercise_definition_id': exerciseDef.first['id'],
+                  'target_sets':
+                      item['default_sets'] ?? item['target_sets'] ?? 3,
+                  'target_reps':
+                      item['default_reps'] ?? item['target_reps'] ?? 10,
+                  'order_index': item['order_index'],
+                });
+              }
+            }
+          }
+        } catch (e) {
+          // Migration failed, continue with empty table
+        }
+
+        // Drop old table and rename new one
+        await db.execute('DROP TABLE IF EXISTS routine_items');
+        await db
+            .execute('ALTER TABLE routine_items_new RENAME TO routine_items');
+      } catch (e) {
+        // If migration fails, just recreate the table
+        await db.execute('DROP TABLE IF EXISTS routine_items');
+        await db.execute('''
+          CREATE TABLE routine_items(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            routine_id INTEGER NOT NULL,
+            exercise_definition_id INTEGER NOT NULL,
+            target_sets INTEGER NOT NULL,
+            target_reps INTEGER NOT NULL,
+            order_index INTEGER NOT NULL,
+            FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
+            FOREIGN KEY(exercise_definition_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+          )
+        ''');
+      }
+    }
+    if (oldVersion < 10) {
+      // Seed exercise definitions if table is empty
+      await _seedExerciseDefinitions(db);
+    }
+    if (oldVersion < 11) {
+      // Add note column to routine_items
+      try {
+        await db.execute('ALTER TABLE routine_items ADD COLUMN note TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+      // Seed hardcoded routines
+      await _seedHardcodedRoutines(db);
+    }
+  }
+
+  /// Seeds the exercise definitions database with anatomical exercise data
+  Future<void> _seedExerciseDefinitions(Database db) async {
+    // Anatomical Exercise Database
+    final anatomicalExerciseDatabase = {
+      // --- ALT VÜCUT (LOWER BODY) ---
+      "Quadriceps (Ön Bacak & Diz Ekstansiyonu)": [
+        "Cossack Squats",
+        "Bulgarian Split Squats",
+        "Shrimp Squats",
+        "Deep Squats",
+        "Jump Squats",
+        "Jump Lunges",
+        "Walking Lunges",
+        "Step Downs",
+        "Barbell Squats",
+        "Smith Machine Squat",
+        "Full Range of Motion Leg Presses",
+        "Lying Leg Presses",
+        "Ankle Twisted Squats",
+      ],
+      "Hamstrings & Gluteus Maximus (Arka Bacak & Kalça)": [
+        "Feet Elevated Leg Curls",
+        "Glute Bridges",
+        "Hip Thrusts",
+        "BW Hip Thrusts",
+        "Romanian Deadlifts",
+        "Dumbbell Deadlifts",
+        "Resistance Band RDL",
+        "Lying Leg Curls",
+        "Kettlebell Swings",
+      ],
+      "Hip Flexors (Kalça Bükücüler & Patlayıcılık)": [
+        "Slow Mountain Climbers",
+        "Mountain Climbers",
+        "High-Knee Sprints",
+        "Box Jumps",
+      ],
+      "Calves (Kalf - Gastrocnemius & Soleus)": [
+        "Calf Raises",
+        "Smith Machine Calf Raise",
+        "Toe Raises",
+        "High-Heels Sprints",
+      ],
+      "Tibialis Anterior (Kaval Kemiği & Ayak Bileği)": [
+        "Tibialis Raises",
+        "Ankle Twisted Squats",
+      ],
+      // --- ÜST VÜCUT İTİŞ (UPPER PUSH) ---
+      "Pectoralis Major (Göğüs)": [
+        "Pushups",
+        "Decline Pushups",
+        "Diamond Pushups",
+        "Plyometric Pushups",
+        "Archer Pushups",
+        "Dips",
+        "Feet Elevated Bench Dips",
+        "Plyometric Feet Elevated Bench Dips",
+        "Assisted Dip Machine",
+        "Incline Dumbell Press",
+        "Dumbbell Press",
+        "Resistance Band Fly",
+      ],
+      "Anterior Deltoid (Ön Omuz)": [
+        "Military Press",
+        "Dumbbell Shoulder Press",
+        "Shoulder Press Machine",
+        "Z-Press",
+        "Banded Shoulder Press",
+        "Pike Pushups",
+        "Pseudo Planche Pushups",
+        "Planche Progressions",
+      ],
+      "Triceps Brachii (Arka Kol)": [
+        "Triceps Overhead Extension",
+        "Prone Overhead Tricep Extensions",
+        "Cable Triceps Extension",
+        "Tricep Pushdowns",
+        "Feet Elevated Bench Dips",
+      ],
+      // --- ÜST VÜCUT ÇEKİŞ (UPPER PULL) ---
+      "Latissimus Dorsi (Kanat - Dikey Çekiş)": [
+        "Pullups",
+        "Chinups",
+        "Neutral Grip Pullups",
+        "Wide Grip Australian Pullups",
+        "One Towel Pullups",
+        "Lat Pulldowns",
+        "Supinated Lat Pulldowns",
+        "Explosive Lat Pulldown",
+        "Resistance Band Pulls for Lats",
+      ],
+      "Rhomboids & Mid-Traps (Orta Sırt - Yatay Çekiş)": [
+        "Chest Supported Dumbbell Row",
+        "Knee to Bench Dumbell Row",
+        "Inverted Row",
+        "Barbell Row",
+        "Narrow Cable Row",
+        "Wide Seated Cable Rows",
+        "Incline Rows",
+        "T-Bar Rows",
+        "Resistance Band Rows",
+        "Feet Elevated Inverted Rows",
+      ],
+      "Upper Trapezius (Üst Trapez)": [
+        "Dumbbell Shrug",
+        "Smith Machine Shrugs",
+        "Z Bar Upright Row",
+        "Dumbbell Upright Rows",
+        "Banded Upright Row",
+      ],
+      "Posterior & Lateral Deltoid (Arka & Yan Omuz)": [
+        "Dumbbell Lateral Raise",
+        "Bentover Lateral Raise",
+        "Resistance Band Lateral Raises",
+        "Light Lateral Raises",
+        "Reverse Flies",
+      ],
+      "Rotator Cuff & Scapular Health (Omuz Sağlığı)": [
+        "Cable Face Pull",
+        "Banded Face Pull",
+        "Scapular Pull Ups",
+        "Scapular Pushups",
+        "Wall Walks",
+        "Handstand Hold",
+        "Dead Hangs",
+      ],
+      "Biceps Brachii (Pazu)": [
+        "Biceps Preacher Curl",
+        "Hammer Curl",
+        "Pelican Curl",
+      ],
+      "Forearms & Grip Strength (Ön Kol & Tutuş)": [
+        "Wrist Rolls",
+        "Forearm Twist",
+        "Hand Grippers",
+        "Finger Extensor Band",
+        "Grip Work",
+        "Farmer's Carry",
+      ],
+      // --- CORE & STABILITY (MERKEZ BÖLGE) ---
+      "Rectus Abdominis (Karın - Alt/Üst)": [
+        "Crunches",
+        "Sprinter Sit-Ups",
+        "Leg Raises",
+        "Hanging Leg Raises",
+        "Ab Rollout",
+        "Dragon Flag Negatives",
+        "Superman Snap-Ups",
+      ],
+      "Obliques (Yan Karın & Rotasyon)": [
+        "Russian Twists",
+        "Windshield Wipers",
+        "Lying Windshield Wipers",
+        "Resistance Band WoodChoppers",
+        "Cable Woodchoppers",
+        "Side Plank",
+        "Side to Side Turning Planks",
+        "Plank with Reach",
+        "Side Kickthroughs",
+        "Dumbbell Side Bends",
+        "Dumbbell Twists",
+      ],
+      "Transverse Abdominis & Stability (Derin Core)": [
+        "Plank",
+        "RKC Plank",
+        "Hollow Body Hold",
+        "Dead Bug",
+        "Bird-Dog",
+        "Vacuum Breaths",
+        "Plank with Thrusts",
+      ],
+      "Erector Spinae (Bel & Omurga)": [
+        "Hyperextensions",
+        "Reverse Hyperextensions",
+        "Tuck Reverse Hyperextensions",
+        "Superman Hold",
+        "Reverse Plank",
+      ],
+      // --- CARDIO & POWER ---
+      "Full Body Power & Cardio": [
+        "Jump Rope",
+        "Cable Punches",
+        "Resistance Band Punches",
+        "Banded Boxing",
+        "Ground Slam Simulation",
+        "Kegels",
+      ],
+    };
+
+    // Helper function to extract default type from exercise name
+    String? _extractDefaultType(String exerciseName) {
+      final lower = exerciseName.toLowerCase();
+      if (lower.contains('bw ') ||
+          lower.contains('bodyweight') ||
+          lower.startsWith('pushup') ||
+          lower.startsWith('pullup') ||
+          lower.startsWith('chinup') ||
+          lower.contains('squat') ||
+          lower.contains('lunge') ||
+          lower.contains('plank') ||
+          lower.contains('crunch') ||
+          lower.contains('sit-up') ||
+          lower.contains('leg raise') ||
+          lower.contains('bridge') ||
+          lower.contains('mountain climber') ||
+          lower.contains('dead hang') ||
+          lower.contains('handstand') ||
+          lower.contains('wall walk') ||
+          lower.contains('jump rope') ||
+          lower.contains('kegel') ||
+          lower.contains('hyperextension') ||
+          lower.contains('superman') ||
+          lower.contains('hollow body') ||
+          lower.contains('dead bug') ||
+          lower.contains('bird-dog') ||
+          lower.contains('vacuum') ||
+          lower.contains('inverted row') ||
+          lower.contains('dip') ||
+          lower.contains('pike pushup') ||
+          lower.contains('planche') ||
+          lower.contains('scapular') ||
+          lower.contains('box jump') ||
+          lower.contains('sprint') ||
+          lower.contains('toe raise') ||
+          lower.contains('tibialis raise') ||
+          lower.contains('calf raise')) {
+        return 'BW';
+      }
+      if (lower.contains('dumbbell') ||
+          lower.contains('db ') ||
+          lower.contains('dumbell')) {
+        return 'Dumbbell';
+      }
+      if (lower.contains('cable') ||
+          lower.contains('pulldown') ||
+          lower.contains('pushdown') ||
+          lower.contains('face pull') ||
+          lower.contains('woodchopper')) {
+        return 'Cable';
+      }
+      if (lower.contains('barbell') ||
+          lower.contains('bb ') ||
+          lower.contains('t-bar')) {
+        return 'Barbell';
+      }
+      if (lower.contains('machine') ||
+          lower.contains('smith machine') ||
+          lower.contains('leg press') ||
+          lower.contains('assisted') ||
+          lower.contains('preacher curl')) {
+        return 'Machine';
+      }
+      if (lower.contains('resistance band') ||
+          lower.contains('banded') ||
+          lower.contains('band ')) {
+        return 'Resistance Band';
+      }
+      if (lower.contains('kettlebell') || lower.contains('kb ')) {
+        return 'Kettlebell';
+      }
+      return null;
+    }
+
+    // Insert all exercises (only if they don't exist)
+    for (final entry in anatomicalExerciseDatabase.entries) {
+      final bodyPart = entry.key;
+      final exercises = entry.value;
+
+      for (final exerciseName in exercises) {
+        // Check if exercise already exists (to avoid duplicates)
+        final existing = await db.query(
+          'exercise_definitions',
+          where: 'name = ?',
+          whereArgs: [exerciseName],
+          limit: 1,
+        );
+
+        if (existing.isEmpty) {
+          await db.insert('exercise_definitions', {
+            'name': exerciseName,
+            'default_type': _extractDefaultType(exerciseName),
+            'body_part': bodyPart,
+          });
+        }
+      }
+    }
+  }
+
+  /// Seeds hardcoded routine templates into the database
+  Future<void> _seedHardcodedRoutines(Database db) async {
+    final hardcodedRoutines = getHardcodedRoutines();
+
+    // Helper function to parse sets and reps from note
+    Map<String, int> _parseSetsReps(String? note) {
+      if (note == null || note.isEmpty) {
+        return {'sets': 3, 'reps': 10};
+      }
+      final regex = RegExp(r'(\d+)x(\d+)');
+      final match = regex.firstMatch(note);
+      if (match != null) {
+        return {
+          'sets': int.tryParse(match.group(1) ?? '3') ?? 3,
+          'reps': int.tryParse(match.group(2) ?? '10') ?? 10,
+        };
+      }
+      return {'sets': 3, 'reps': 10};
+    }
+
+    // Get all exercise definitions to map names to IDs
+    final exerciseDefs = await db.query('exercise_definitions');
+    final exerciseMap = <String, int>{};
+    for (final def in exerciseDefs) {
+      exerciseMap[def['name'] as String] = def['id'] as int;
+    }
+
+    // Insert routines
+    for (final routineTemplate in hardcodedRoutines) {
+      final existingRoutines = await db.query(
+        'routines',
+        where: 'name = ?',
+        whereArgs: [routineTemplate.routineName],
+        limit: 1,
+      );
+
+      int routineId;
+      if (existingRoutines.isEmpty) {
+        routineId = await db.insert('routines', {
+          'name': routineTemplate.routineName,
+          'created_at': DateTime.now().millisecondsSinceEpoch,
+        });
+      } else {
+        routineId = existingRoutines.first['id'] as int;
+        await db.delete('routine_items',
+            where: 'routine_id = ?', whereArgs: [routineId]);
+      }
+
+      for (int i = 0; i < routineTemplate.exercises.length; i++) {
+        final item = routineTemplate.exercises[i];
+        final exerciseId = exerciseMap[item.exerciseName];
+
+        if (exerciseId != null) {
+          final setsReps = _parseSetsReps(item.note);
+          await db.insert('routine_items', {
+            'routine_id': routineId,
+            'exercise_definition_id': exerciseId,
+            'target_sets': setsReps['sets']!,
+            'target_reps': setsReps['reps']!,
+            'order_index': i,
+            'note': item.note,
+          });
+        }
+      }
     }
   }
 }

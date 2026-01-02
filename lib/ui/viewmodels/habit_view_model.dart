@@ -10,20 +10,24 @@ import '../../data/models/daily_rating_model.dart';
 import '../../data/repositories/i_habit_repository.dart';
 import '../../data/repositories/sql_habit_repository.dart';
 import '../../utils/id_generator.dart';
+import '../providers/date_provider.dart';
 
 /// ViewModel for the Habit & Goal Logger module.
 class HabitViewModel extends ChangeNotifier {
-  HabitViewModel({IHabitRepository? repository})
-      : _repository = repository ?? SqlHabitRepository();
+  HabitViewModel({
+    IHabitRepository? repository,
+    DateProvider? dateProvider,
+  })  : _repository = repository ?? SqlHabitRepository(),
+        _dateProvider = dateProvider;
 
   final IHabitRepository _repository;
+  final DateProvider? _dateProvider;
 
   // === State ===
   List<LifeGoalModel> _goals = [];
   List<HabitModel> _habits = [];
   Map<String, bool> _todayCompletions = {};
   DailyRatingModel? _selectedDateRating;
-  DateTime _selectedDate = DateTime.now();
   bool _loading = false;
 
   // === Getters ===
@@ -31,11 +35,17 @@ class HabitViewModel extends ChangeNotifier {
   List<HabitModel> get habits => _habits;
   Map<String, bool> get completions => _todayCompletions;
   DailyRatingModel? get selectedDateRating => _selectedDateRating;
-  DateTime get selectedDate => _selectedDate;
+  DateTime get selectedDate {
+    final date = _dateProvider?.selectedDate ?? DateTime.now();
+    return HabitLogModel.normalizeDate(date);
+  }
+
   bool get isLoading => _loading;
 
   /// Initialize the ViewModel by loading all data.
   Future<void> init() async {
+    // Listen to date changes
+    _dateProvider?.addListener(_onDateChanged);
     _loading = true;
     notifyListeners();
 
@@ -49,16 +59,27 @@ class HabitViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    _dateProvider?.removeListener(_onDateChanged);
+    super.dispose();
+  }
+
+  void _onDateChanged() {
+    loadDataForSelectedDate();
+  }
+
   // === Date Selection ===
   void setSelectedDate(DateTime date) {
-    _selectedDate = HabitLogModel.normalizeDate(date);
+    _dateProvider?.setSelectedDate(date);
     loadDataForSelectedDate();
   }
 
   Future<void> loadDataForSelectedDate() async {
+    final date = selectedDate;
     await Future.wait([
-      _loadCompletionsForDate(_selectedDate),
-      _loadRatingForDate(_selectedDate),
+      _loadCompletionsForDate(date),
+      _loadRatingForDate(date),
     ]);
     notifyListeners();
   }
@@ -168,7 +189,7 @@ class HabitViewModel extends ChangeNotifier {
     notifyListeners();
 
     // Persist to database
-    await _repository.setHabitCompletion(habitId, _selectedDate, newStatus);
+    await _repository.setHabitCompletion(habitId, selectedDate, newStatus);
   }
 
   /// Sets habit completion explicitly.
@@ -178,7 +199,7 @@ class HabitViewModel extends ChangeNotifier {
     notifyListeners();
 
     // Persist to database
-    await _repository.setHabitCompletion(habitId, _selectedDate, isCompleted);
+    await _repository.setHabitCompletion(habitId, selectedDate, isCompleted);
   }
 
   // === Daily Ratings ===
@@ -188,7 +209,7 @@ class HabitViewModel extends ChangeNotifier {
 
   Future<void> setDailyRating(int score, {String? note}) async {
     final rating = DailyRatingModel(
-      date: _selectedDate,
+      date: selectedDate,
       score: score,
       note: note,
     );
@@ -199,7 +220,7 @@ class HabitViewModel extends ChangeNotifier {
   }
 
   Future<void> deleteDailyRating() async {
-    await _repository.deleteDailyRating(_selectedDate);
+    await _repository.deleteDailyRating(selectedDate);
     _selectedDateRating = null;
     notifyListeners();
   }
