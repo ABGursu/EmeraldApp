@@ -490,8 +490,9 @@ class _TransactionList extends StatelessWidget {
     
     // Use ListView.builder to only render visible date groups
     // Each date group typically has < 20 transactions, which is acceptable
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + bottomPadding),
       itemCount: entries.length,
       itemBuilder: (context, index) {
         final entry = entries[index];

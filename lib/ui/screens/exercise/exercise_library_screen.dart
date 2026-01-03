@@ -92,9 +92,12 @@ class ExerciseLibraryScreen extends StatelessWidget {
                                 ],
                               ),
                             )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(8),
-                              itemCount: vm.filteredExerciseDefinitions.length,
+                          : Builder(
+                              builder: (context) {
+                                final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                                return ListView.builder(
+                                  padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomPadding),
+                                  itemCount: vm.filteredExerciseDefinitions.length,
                               itemBuilder: (context, index) {
                                 final definition =
                                     vm.filteredExerciseDefinitions[index];
@@ -145,6 +148,8 @@ class ExerciseLibraryScreen extends StatelessWidget {
                                       ],
                                     ),
                                   ),
+                                );
+                              },
                                 );
                               },
                             ),

@@ -118,15 +118,20 @@ class _ShoppingListContent extends StatelessWidget {
           ),
           Expanded(
             flex: unpurchased.length > purchased.length ? 2 : 1,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: unpurchased.length,
-              itemBuilder: (context, index) {
-                final item = unpurchased[index];
-                return _ShoppingItemTile(
-                  item: item,
-                  vm: vm,
-                  isPurchased: false,
+            child: Builder(
+              builder: (context) {
+                final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                return ListView.builder(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+                  itemCount: unpurchased.length,
+                  itemBuilder: (context, index) {
+                    final item = unpurchased[index];
+                    return _ShoppingItemTile(
+                      item: item,
+                      vm: vm,
+                      isPurchased: false,
+                    );
+                  },
                 );
               },
             ),
@@ -144,17 +149,22 @@ class _ShoppingListContent extends StatelessWidget {
             ),
             initiallyExpanded: false,
             children: [
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: purchased.length,
-                itemBuilder: (context, index) {
-                  final item = purchased[index];
-                  return _ShoppingItemTile(
-                    item: item,
-                    vm: vm,
-                    isPurchased: true,
+              Builder(
+                builder: (context) {
+                  final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+                    itemCount: purchased.length,
+                    itemBuilder: (context, index) {
+                      final item = purchased[index];
+                      return _ShoppingItemTile(
+                        item: item,
+                        vm: vm,
+                        isPurchased: true,
+                      );
+                    },
                   );
                 },
               ),

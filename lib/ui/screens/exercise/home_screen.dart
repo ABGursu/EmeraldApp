@@ -334,8 +334,9 @@ class _WorkoutLogsList extends StatelessWidget {
       );
     }
 
+    final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
     return ReorderableListView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomPadding),
       itemCount: logs.length,
       onReorder: (oldIndex, newIndex) {
         vm.reorderLogs(oldIndex, newIndex);

@@ -45,3 +45,4 @@ app.*.map.json
 
 DATA_OUTPUT_EXAMPLES.md
 @Optimization_Plan.md
+*.json

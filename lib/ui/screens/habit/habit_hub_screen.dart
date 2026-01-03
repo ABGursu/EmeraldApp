@@ -65,10 +65,14 @@ class HabitHubScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 // Action Cards Grid
                 Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
+                  child: Builder(
+                    builder: (context) {
+                      final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                      return GridView.count(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        padding: EdgeInsets.only(bottom: bottomPadding),
                     children: [
                       _buildActionCard(
                         context,
@@ -113,6 +117,8 @@ class HabitHubScreen extends StatelessWidget {
                         onTap: () => _showStatsBottomSheet(context, vm),
                       ),
                     ],
+                      );
+                    },
                   ),
                 ),
               ],
