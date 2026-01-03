@@ -249,8 +249,9 @@ class SupplementViewModel extends ChangeNotifier {
     }
 
     final directory = await _getExportDir();
-    final fileName =
-        'supplements_${from.millisecondsSinceEpoch}_${to.millisecondsSinceEpoch}.txt';
+    final fromStr = formatDateForFilename(from);
+    final toStr = formatDateForFilename(to);
+    final fileName = 'supplements_$fromStr-$toStr.txt';
     final file = File('${directory.path}/$fileName');
     await file.writeAsString(buffer.toString());
     return file.path;

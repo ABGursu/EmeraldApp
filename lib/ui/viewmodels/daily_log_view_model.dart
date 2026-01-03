@@ -8,6 +8,7 @@ import '../../data/models/user_stats_model.dart';
 import '../../data/models/workout_log_model.dart';
 import '../../data/repositories/i_exercise_log_repository.dart';
 import '../../data/repositories/sql_exercise_log_repository.dart';
+import '../../utils/date_formats.dart';
 import '../providers/date_provider.dart';
 
 class DailyLogViewModel extends ChangeNotifier {
@@ -87,6 +88,12 @@ class DailyLogViewModel extends ChangeNotifier {
       orderIndex: maxOrderIndex,
       isCompleted: false,
     );
+    final id = await _repository.createWorkoutLog(log);
+    await loadLogsForDate(selectedDate);
+    return id;
+  }
+
+  Future<int> addWorkoutLog(WorkoutLog log) async {
     final id = await _repository.createWorkoutLog(log);
     await loadLogsForDate(selectedDate);
     return id;
@@ -190,6 +197,11 @@ class DailyLogViewModel extends ChangeNotifier {
     await loadUserStats();
   }
 
+  // Get last log details for an exercise (for Smart Pre-fill)
+  Future<WorkoutLog?> getLastLogDetails(String exerciseName) async {
+    return await _repository.getLastLogForExercise(exerciseName);
+  }
+
   // Export
   Future<String> exportLogs({
     required DateTime from,
@@ -202,8 +214,9 @@ class DailyLogViewModel extends ChangeNotifier {
       buffer.writeln(log.toLogString());
     }
 
-    final fileName =
-        'workout_logs_${from.millisecondsSinceEpoch}_${to.millisecondsSinceEpoch}.txt';
+    final fromStr = formatDateForFilename(from);
+    final toStr = formatDateForFilename(to);
+    final fileName = 'workout_logs_$fromStr-$toStr.txt';
     final file = File('${directory.path}/$fileName');
     await file.writeAsString(buffer.toString());
     return file.path;

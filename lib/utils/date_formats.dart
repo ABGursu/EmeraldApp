@@ -16,3 +16,11 @@ String formatDate(DateTime dateTime) {
   return '$day.$month.$year';
 }
 
+/// Formats date for filename: ddMMyyyy (e.g., 03012025)
+String formatDateForFilename(DateTime dateTime) {
+  final day = _twoDigits(dateTime.day);
+  final month = _twoDigits(dateTime.month);
+  final year = dateTime.year.toString();
+  return '$day$month$year';
+}
+

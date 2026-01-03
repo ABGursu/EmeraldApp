@@ -36,6 +36,7 @@ abstract class IExerciseLogRepository {
     DateTime to,
   );
   Future<void> reorderWorkoutLogs(List<WorkoutLog> logs);
+  Future<WorkoutLog?> getLastLogForExercise(String exerciseName);
 
   // User Stats
   Future<UserStats> getUserStats();

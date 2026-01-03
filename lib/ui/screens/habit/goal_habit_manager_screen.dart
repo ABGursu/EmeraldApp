@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/life_goal_model.dart';
 import '../../../data/models/habit_model.dart';
+import '../../../data/models/habit_type.dart';
 import '../../viewmodels/habit_view_model.dart';
 
 /// Screen for managing goals and habits.
@@ -434,26 +435,46 @@ class _HabitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isNegative = habit.type == HabitType.negative;
+    // Use reddish/orange tint for negative habits, otherwise use habit's color
+    final habitColor = isNegative
+        ? Colors.orange.shade600
+        : Color(habit.colorValue);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Color(habit.colorValue).withValues(alpha: 0.5),
+          color: habitColor.withValues(alpha: 0.5),
           width: 2,
         ),
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Color(habit.colorValue).withValues(alpha: 0.2),
+          backgroundColor: habitColor.withValues(alpha: 0.2),
           child: Icon(
-            Icons.repeat,
-            color: Color(habit.colorValue),
+            isNegative ? Icons.block : Icons.repeat,
+            color: habitColor,
           ),
         ),
-        title: Text(
-          habit.title,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        title: Row(
+          children: [
+            if (isNegative) ...[
+              Icon(
+                Icons.block,
+                size: 16,
+                color: Colors.orange.shade600,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Expanded(
+              child: Text(
+                habit.title,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
         ),
         trailing: PopupMenuButton(
           itemBuilder: (context) => [
@@ -530,6 +551,7 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
   late TextEditingController _titleController;
   String? _selectedGoalId;
   int _selectedColor = 0xFF2196F3; // Blue default
+  HabitType _selectedType = HabitType.positive;
 
   final List<int> _colorOptions = [
     0xFF2196F3, // Blue
@@ -550,6 +572,7 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
     _titleController = TextEditingController(text: widget.existing?.title ?? '');
     _selectedGoalId = widget.existing?.goalId;
     _selectedColor = widget.existing?.colorValue ?? 0xFF2196F3;
+    _selectedType = widget.existing?.type ?? HabitType.positive;
   }
 
   @override
@@ -578,6 +601,31 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
               ),
               textCapitalization: TextCapitalization.sentences,
               autofocus: isNew,
+            ),
+            const SizedBox(height: 16),
+            // Habit Type Selection
+            Text(
+              'Habit Type',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<HabitType>(
+              segments: const [
+                ButtonSegment<HabitType>(
+                  value: HabitType.positive,
+                  label: Text('Build (Positive)'),
+                  icon: Icon(Icons.add_circle_outline),
+                ),
+                ButtonSegment<HabitType>(
+                  value: HabitType.negative,
+                  label: Text('Quit (Negative)'),
+                  icon: Icon(Icons.remove_circle_outline),
+                ),
+              ],
+              selected: {_selectedType},
+              onSelectionChanged: (Set<HabitType> selection) {
+                setState(() => _selectedType = selection.first);
+              },
             ),
             const SizedBox(height: 16),
             // Goal Dropdown
@@ -658,6 +706,7 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
                 _titleController.text.trim(),
                 goalId: _selectedGoalId,
                 colorValue: _selectedColor,
+                type: _selectedType,
               );
             } else {
               vm.updateHabit(widget.existing!.copyWith(
@@ -665,6 +714,7 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
                 goalId: _selectedGoalId,
                 clearGoalId: _selectedGoalId == null,
                 colorValue: _selectedColor,
+                type: _selectedType,
               ));
             }
             Navigator.pop(context);
@@ -675,4 +725,5 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
     );
   }
 }
+
 

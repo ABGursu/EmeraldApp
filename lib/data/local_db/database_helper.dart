@@ -4,8 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import 'hardcoded_routines.dart';
 
 class DatabaseHelper {
-  static const String _dbName = 'personal_logger.db';
-  static const int _dbVersion = 11;
+  static const String _dbName = 'emerald_app.db';
+  static const int _dbVersion = 12;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -413,6 +413,7 @@ class DatabaseHelper {
         title TEXT NOT NULL,
         color_value INTEGER NOT NULL,
         is_archived INTEGER NOT NULL DEFAULT 0,
+        type TEXT NOT NULL DEFAULT 'positive',
         FOREIGN KEY(goal_id) REFERENCES life_goals(id) ON DELETE SET NULL
       )
     ''');
@@ -518,6 +519,7 @@ class DatabaseHelper {
         target_sets INTEGER NOT NULL,
         target_reps INTEGER NOT NULL,
         order_index INTEGER NOT NULL,
+        note TEXT,
         FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE CASCADE,
         FOREIGN KEY(exercise_definition_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
       )
@@ -734,6 +736,17 @@ class DatabaseHelper {
       }
       // Seed hardcoded routines
       await _seedHardcodedRoutines(db);
+    }
+    if (oldVersion < 12) {
+      // Add type column to habits table for positive/negative habit support
+      try {
+        await db.execute(
+            'ALTER TABLE habits ADD COLUMN type TEXT NOT NULL DEFAULT \'positive\'');
+        // Update all existing habits to be positive (default)
+        await db.update('habits', {'type': 'positive'});
+      } catch (e) {
+        // Column might already exist
+      }
     }
   }
 

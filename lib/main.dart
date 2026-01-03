@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'data/local_db/database_helper.dart';
 import 'ui/screens/balance/balance_screen.dart';
+import 'ui/screens/backup/backup_settings_screen.dart';
 import 'ui/screens/exercise/exercise_log_screen.dart';
 import 'ui/screens/habit/habit_hub_screen.dart';
 import 'ui/screens/supplement/supplement_hub_screen.dart';
@@ -16,11 +17,11 @@ import 'ui/viewmodels/supplement_view_model.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseHelper.instance.database;
-  runApp(const PersonalLoggerApp());
+  runApp(const EmeraldApp());
 }
 
-class PersonalLoggerApp extends StatelessWidget {
-  const PersonalLoggerApp({super.key});
+class EmeraldApp extends StatelessWidget {
+  const EmeraldApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -110,7 +111,7 @@ class MainMenuScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Personal Logger'),
+        title: const Text('EmeraldApp'),
         centerTitle: true,
       ),
       body: ListView(
@@ -165,6 +166,20 @@ class MainMenuScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const HabitHubScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          _buildModuleCard(
+            context,
+            title: 'Backup & Restore',
+            subtitle: 'Export and restore all data',
+            icon: Icons.backup,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const BackupSettingsScreen(),
                 ),
               );
             },

@@ -97,9 +97,17 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (context) => _ExerciseSelectorDialog(
         definitions: libraryVm.exerciseDefinitions,
-        onSelect: (definition) async {
+        onSelect: (definition) {
           Navigator.of(context).pop();
-          await vm.addWorkoutLogFromDefinition(definition);
+          // Show the Add/Edit sheet with the selected exercise
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => ChangeNotifierProvider.value(
+              value: vm,
+              child: AddEditWorkoutLogSheet(exerciseDefinition: definition),
+            ),
+          );
         },
       ),
     );

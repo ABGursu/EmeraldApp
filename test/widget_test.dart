@@ -7,16 +7,16 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:personal_logger/main.dart';
+import 'package:emerald_app/main.dart';
 
 void main() {
   testWidgets('App loads and displays main menu', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const PersonalLoggerApp());
+    await tester.pumpWidget(const EmeraldApp());
     await tester.pumpAndSettle();
 
     // Verify that the main menu screen is displayed.
-    expect(find.text('Personal Logger'), findsOneWidget);
+    expect(find.text('EmeraldApp'), findsOneWidget);
     expect(find.text('Balance Sheet'), findsOneWidget);
     expect(find.text('Exercise Logger'), findsOneWidget);
   });

@@ -5,10 +5,12 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../data/models/life_goal_model.dart';
 import '../../data/models/habit_model.dart';
+import '../../data/models/habit_type.dart';
 import '../../data/models/habit_log_model.dart';
 import '../../data/models/daily_rating_model.dart';
 import '../../data/repositories/i_habit_repository.dart';
 import '../../data/repositories/sql_habit_repository.dart';
+import '../../utils/date_formats.dart';
 import '../../utils/id_generator.dart';
 import '../providers/date_provider.dart';
 
@@ -126,12 +128,14 @@ class HabitViewModel extends ChangeNotifier {
     String title, {
     String? goalId,
     required int colorValue,
+    HabitType type = HabitType.positive,
   }) async {
     final habit = HabitModel(
       id: generateId(),
       goalId: goalId,
       title: title,
       colorValue: colorValue,
+      type: type,
     );
     final id = await _repository.createHabit(habit);
     await loadHabits();
@@ -295,8 +299,9 @@ class HabitViewModel extends ChangeNotifier {
     }
 
     final directory = await _getExportDir();
-    final fileName =
-        'habits_${from.millisecondsSinceEpoch}_${to.millisecondsSinceEpoch}.txt';
+    final fromStr = formatDateForFilename(from);
+    final toStr = formatDateForFilename(to);
+    final fileName = 'habits_$fromStr-$toStr.txt';
     final file = File('${directory.path}/$fileName');
     await file.writeAsString(buffer.toString());
     return file.path;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/habit_model.dart';
+import '../../../data/models/habit_type.dart';
 import '../../../data/models/life_goal_model.dart';
 import '../../viewmodels/habit_view_model.dart';
 
@@ -443,7 +444,11 @@ class _HabitCheckCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final habitColor = Color(habit.colorValue);
+    final isNegative = habit.type == HabitType.negative;
+    // Use reddish/orange tint for negative habits, otherwise use habit's color
+    final habitColor = isNegative
+        ? Colors.orange.shade600
+        : Color(habit.colorValue);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -485,20 +490,34 @@ class _HabitCheckCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      habit.title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        decoration: isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: isCompleted
-                            ? Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.5)
-                            : null,
-                      ),
+                    Row(
+                      children: [
+                        if (isNegative) ...[
+                          Icon(
+                            Icons.block,
+                            size: 16,
+                            color: Colors.orange.shade600,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            habit.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              decoration: isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: isCompleted
+                                  ? Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5)
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -509,7 +528,9 @@ class _HabitCheckCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: isCompleted
-                      ? Colors.green.withValues(alpha: 0.15)
+                      ? (isNegative
+                          ? Colors.orange.withValues(alpha: 0.15)
+                          : Colors.green.withValues(alpha: 0.15))
                       : Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -518,7 +539,9 @@ class _HabitCheckCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isCompleted ? Colors.green : Colors.grey,
+                    color: isCompleted
+                        ? (isNegative ? Colors.orange.shade700 : Colors.green)
+                        : Colors.grey,
                   ),
                 ),
               ),

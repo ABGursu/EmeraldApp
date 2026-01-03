@@ -1,5 +1,5 @@
-name: personal_logger
-description: A private Android app for financial tracking and workout logging.
+name: emerald_app
+description: EmeraldApp - A private Android app for financial tracking and workout logging.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -23,6 +23,7 @@ dependencies:
   # I/O & Permissions
   path_provider: ^2.1.1
   permission_handler: ^11.1.0
+  file_picker: ^6.1.1
 
 dev_dependencies:
   flutter_test:

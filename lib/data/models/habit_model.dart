@@ -1,3 +1,5 @@
+import 'habit_type.dart';
+
 /// Represents a habit that can be linked to a life goal.
 class HabitModel {
   final String id;
@@ -5,6 +7,7 @@ class HabitModel {
   final String title;
   final int colorValue;
   final bool isArchived;
+  final HabitType type;
 
   const HabitModel({
     required this.id,
@@ -12,6 +15,7 @@ class HabitModel {
     required this.title,
     required this.colorValue,
     this.isArchived = false,
+    this.type = HabitType.positive,
   });
 
   HabitModel copyWith({
@@ -21,6 +25,7 @@ class HabitModel {
     String? title,
     int? colorValue,
     bool? isArchived,
+    HabitType? type,
   }) {
     return HabitModel(
       id: id ?? this.id,
@@ -28,6 +33,7 @@ class HabitModel {
       title: title ?? this.title,
       colorValue: colorValue ?? this.colorValue,
       isArchived: isArchived ?? this.isArchived,
+      type: type ?? this.type,
     );
   }
 
@@ -37,6 +43,7 @@ class HabitModel {
         'title': title,
         'color_value': colorValue,
         'is_archived': isArchived ? 1 : 0,
+        'type': type.toDbString(),
       };
 
   factory HabitModel.fromMap(Map<String, dynamic> map) {
@@ -46,6 +53,9 @@ class HabitModel {
       title: map['title'] as String,
       colorValue: map['color_value'] as int,
       isArchived: (map['is_archived'] as int? ?? 0) == 1,
+      type: map['type'] != null
+          ? HabitType.fromDbString(map['type'] as String)
+          : HabitType.positive, // Default for backward compatibility
     );
   }
 
@@ -60,6 +70,6 @@ class HabitModel {
 
   @override
   String toString() =>
-      'HabitModel(id: $id, title: $title, goalId: $goalId, color: $colorValue)';
+      'HabitModel(id: $id, title: $title, goalId: $goalId, color: $colorValue, type: ${type.toDbString()})';
 }
 

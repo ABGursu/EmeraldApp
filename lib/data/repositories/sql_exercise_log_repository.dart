@@ -220,6 +220,20 @@ class SqlExerciseLogRepository implements IExerciseLogRepository {
     await batch.commit(noResult: true);
   }
 
+  @override
+  Future<WorkoutLog?> getLastLogForExercise(String exerciseName) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'workout_logs',
+      where: 'exercise_name = ?',
+      whereArgs: [exerciseName],
+      orderBy: 'date DESC',
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return WorkoutLog.fromMap(result.first);
+  }
+
   // User Stats
   @override
   Future<UserStats> getUserStats() async {

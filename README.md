@@ -1,3 +1,3 @@
-# personal_logger
+# EmeraldApp
 
-A new Flutter project.
+A private Android app for financial tracking, workout logging, habit tracking, and supplement management.
