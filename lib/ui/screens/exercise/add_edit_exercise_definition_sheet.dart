@@ -46,12 +46,14 @@ class _AddEditExerciseDefinitionSheetState
     final vm = context.watch<ExerciseLibraryViewModel>();
     final isEditing = widget.definition != null;
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -63,10 +65,14 @@ class _AddEditExerciseDefinitionSheetState
                   isEditing ? 'Edit Exercise' : 'Add Exercise',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -299,11 +305,16 @@ class _AddEditExerciseDefinitionSheetState
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () {
+                if (!context.mounted) return;
                 final name = controller.text.trim();
                 if (name.isNotEmpty && name != oldBodyPart) {
                   Navigator.pop(context, {'old': oldBodyPart, 'new': name});

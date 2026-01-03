@@ -58,10 +58,14 @@ class _EditGoalSheetState extends State<EditGoalSheet> {
                   'Edit Goal',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
               ],
             ),
             const SizedBox(height: 16),

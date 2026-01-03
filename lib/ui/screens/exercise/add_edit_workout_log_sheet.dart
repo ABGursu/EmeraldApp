@@ -89,12 +89,14 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
     final vm = context.watch<DailyLogViewModel>();
     final isEditing = widget.log != null;
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+    return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,7 +110,11 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
                 ),
               ],
             ),
@@ -234,11 +240,17 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
       await vm.updateWorkoutLog(updatedLog);
     } else if (widget.exerciseDefinition != null) {
       // Add Mode: Create new log
-      // Get max order index
+      // Get max order index (optimized: single loop instead of map+reduce)
       final currentLogs = vm.logs;
-      int maxOrderIndex = currentLogs.isEmpty
-          ? 0
-          : currentLogs.map((l) => l.orderIndex).reduce((a, b) => a > b ? a : b) + 1;
+      int maxOrderIndex = 0;
+      if (currentLogs.isNotEmpty) {
+        for (final log in currentLogs) {
+          if (log.orderIndex >= maxOrderIndex) {
+            maxOrderIndex = log.orderIndex;
+          }
+        }
+        maxOrderIndex += 1;
+      }
 
       final newLog = WorkoutLog(
         id: 0,

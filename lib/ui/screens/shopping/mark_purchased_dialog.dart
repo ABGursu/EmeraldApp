@@ -119,7 +119,7 @@ class _MarkPurchasedDialogState extends State<MarkPurchasedDialog> {
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
     }
   }

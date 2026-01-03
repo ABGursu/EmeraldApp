@@ -12,11 +12,22 @@ class CalendarViewScreen extends StatefulWidget {
 
 class _CalendarViewScreenState extends State<CalendarViewScreen> {
   DateTime _displayedMonth = DateTime.now();
+  bool _hasPrecached = false;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<CalendarViewModel>(
       builder: (context, vm, _) {
+        // Pre-cache events for the current month on first build
+        if (!_hasPrecached) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              vm.precacheEventsForMonth(_displayedMonth);
+              _hasPrecached = true;
+            }
+          });
+        }
+        
         return Column(
           children: [
             // Month navigation
@@ -46,6 +57,8 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
                   _displayedMonth.month - 1,
                 );
               });
+              // Pre-cache events for the new month
+              vm.precacheEventsForMonth(_displayedMonth);
             },
           ),
           Text(
@@ -61,6 +74,8 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
                   _displayedMonth.month + 1,
                 );
               });
+              // Pre-cache events for the new month
+              vm.precacheEventsForMonth(_displayedMonth);
             },
           ),
         ],

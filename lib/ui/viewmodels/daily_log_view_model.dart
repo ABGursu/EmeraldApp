@@ -115,10 +115,16 @@ class DailyLogViewModel extends ChangeNotifier with DateRangePersistence {
   }
 
   Future<int> addWorkoutLogFromDefinition(ExerciseDefinition definition) async {
-    // Get max order index
-    int maxOrderIndex = _logs.isEmpty
-        ? 0
-        : _logs.map((l) => l.orderIndex).reduce((a, b) => a > b ? a : b) + 1;
+    // Get max order index (optimized: single loop instead of map+reduce)
+    int maxOrderIndex = 0;
+    if (_logs.isNotEmpty) {
+      for (final log in _logs) {
+        if (log.orderIndex >= maxOrderIndex) {
+          maxOrderIndex = log.orderIndex;
+        }
+      }
+      maxOrderIndex += 1;
+    }
 
     final log = WorkoutLog(
       id: 0,
@@ -187,10 +193,16 @@ class DailyLogViewModel extends ChangeNotifier with DateRangePersistence {
     final items = await _repository.getRoutineItemsByRoutineId(routineId);
     final date = selectedDate;
 
-    // Get max order index for the date
-    int maxOrderIndex = _logs.isEmpty
-        ? 0
-        : _logs.map((l) => l.orderIndex).reduce((a, b) => a > b ? a : b) + 1;
+    // Get max order index for the date (optimized: single loop instead of map+reduce)
+    int maxOrderIndex = 0;
+    if (_logs.isNotEmpty) {
+      for (final log in _logs) {
+        if (log.orderIndex >= maxOrderIndex) {
+          maxOrderIndex = log.orderIndex;
+        }
+      }
+      maxOrderIndex += 1;
+    }
 
     // Get exercise definitions for items
     final exerciseDefs = await _repository.getAllExerciseDefinitions();

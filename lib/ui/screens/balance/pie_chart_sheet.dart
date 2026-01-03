@@ -172,10 +172,14 @@ class _PieChartSheetState extends State<PieChartSheet> {
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
                 ],
               ),
               const SizedBox(height: 12),

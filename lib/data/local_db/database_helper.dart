@@ -5,7 +5,7 @@ import 'hardcoded_routines.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 15;
+  static const int _dbVersion = 17;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -78,6 +78,9 @@ class DatabaseHelper {
 
     // Calendar & Diary Module Tables (v14)
     await _createCalendarTables(db);
+    
+    // Create indexes for performance optimization (v16)
+    await _createIndexes(db);
   }
 
   Future<void> _createSupplementTables(Database db) async {
@@ -852,6 +855,73 @@ class DatabaseHelper {
         // Migration failed, but continue (might be no data or table doesn't exist)
       }
     }
+    if (oldVersion < 16) {
+      // Add performance indexes for frequently queried columns
+      await _createIndexes(db);
+    }
+    if (oldVersion < 17) {
+      // Add text search indexes for exercise definitions and diary entries
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_exercise_definitions_name 
+        ON exercise_definitions(name)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_diary_entries_content 
+        ON diary_entries(content)
+      ''');
+    }
+  }
+
+  /// Creates database indexes for performance optimization
+  /// These indexes speed up queries that filter or sort by date/priority columns
+  Future<void> _createIndexes(Database db) async {
+    // Index on transactions.date for date-based filtering and sorting
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_transactions_date 
+      ON transactions(date)
+    ''');
+
+    // Index on workout_logs.date for date-based queries
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_logs_date 
+      ON workout_logs(date)
+    ''');
+
+    // Composite index on habit_logs for queries filtering by both date and habit_id
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_date_habit 
+      ON habit_logs(date, habit_id)
+    ''');
+
+    // Index on calendar_events.date_time for date range queries
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_calendar_events_date 
+      ON calendar_events(date_time)
+    ''');
+
+    // Index on diary_entries.date for date-based lookups
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_diary_entries_date 
+      ON diary_entries(date)
+    ''');
+
+    // Index on shopping_items.priority for priority-based sorting
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_shopping_priority 
+      ON shopping_items(priority)
+    ''');
+
+    // Index on exercise_definitions.name for name-based queries and sorting
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_exercise_definitions_name 
+      ON exercise_definitions(name)
+    ''');
+
+    // Index on diary_entries.content for future text search functionality
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_diary_entries_content 
+      ON diary_entries(content)
+    ''');
   }
 
   /// Seeds the exercise definitions database with anatomical exercise data

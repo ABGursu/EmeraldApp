@@ -144,12 +144,18 @@ class _EventCard extends StatelessWidget {
         content: Text('Are you sure you want to delete "${event.title}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
               await vm.deleteEvent(event.id);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

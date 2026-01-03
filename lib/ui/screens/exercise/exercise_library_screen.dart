@@ -223,11 +223,16 @@ class ExerciseLibraryScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () {
+                if (!context.mounted) return;
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty && newName != bodyPart) {
                   Navigator.pop(context, {'old': bodyPart, 'new': newName});

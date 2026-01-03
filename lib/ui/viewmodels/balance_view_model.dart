@@ -32,6 +32,11 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   String? _selectedTagId;
   String _tagSearchQuery = '';
 
+  // Cache for groupedByDate to avoid recalculation on every access
+  Map<DateTime, List<TransactionModel>>? _groupedByDateCache;
+  String? _cachedGroupedTagId;
+  int? _cachedTransactionsHash; // Simple hash based on list length and first/last transaction IDs
+
   // Fiscal month settings
   int _budgetStartDay = 1; // Default to calendar month (1st)
 
@@ -62,6 +67,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   /// Sets the selected tag filter
   void setSelectedTag(String? tagId) {
     _selectedTagId = tagId;
+    _groupedByDateCache = null; // Invalidate cache
     notifyListeners();
   }
 
@@ -237,6 +243,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
       _transactions = allTransactions;
     }
     
+    _groupedByDateCache = null; // Invalidate cache when transactions change
     _loading = false;
     notifyListeners();
   }
@@ -319,6 +326,20 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   }
 
   Map<DateTime, List<TransactionModel>> get groupedByDate {
+    // Calculate simple hash for cache validation
+    final currentHash = _transactions.isEmpty
+        ? 0
+        : (_transactions.length.hashCode ^
+            _transactions.first.id.hashCode ^
+            _transactions.last.id.hashCode);
+    
+    // Check if cache is still valid
+    if (_groupedByDateCache != null &&
+        _cachedGroupedTagId == _selectedTagId &&
+        _cachedTransactionsHash == currentHash) {
+      return _groupedByDateCache!;
+    }
+
     // Apply tag filter if set
     final filteredTransactions = _selectedTagId != null
         ? _transactions.where((tx) => tx.tagId == _selectedTagId).toList()
@@ -331,7 +352,13 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     }
     final sortedKeys = grouped.keys.toList()
       ..sort((a, b) => b.compareTo(a)); // newest first
-    return {for (final k in sortedKeys) k: grouped[k]!};
+    
+    // Update cache
+    _groupedByDateCache = {for (final k in sortedKeys) k: grouped[k]!};
+    _cachedGroupedTagId = _selectedTagId;
+    _cachedTransactionsHash = currentHash;
+    
+    return _groupedByDateCache!;
   }
 
   Map<TagModel, double> currentMonthExpensesByTag() {

@@ -20,28 +20,98 @@ class CalendarViewModel extends ChangeNotifier {
   DateTime _selectedDate = DateTime.now();
   bool _loading = false;
 
+  // Cached maps for performance optimization
+  // Key: DateTime normalized to midnight (date only)
+  Map<DateTime, List<CalendarEventModel>> _eventsByDateCache = {};
+  Map<DateTime, List<CalendarEventModel>> _warningEventsByDateCache = {};
+  List<CalendarEventModel>? _stickyEventsCache;
+  DateTime? _stickyEventsCacheTime;
+
   List<CalendarEventModel> get events => _events;
   List<CalendarTagModel> get tags => _tags;
   DiaryEntryModel? get currentDiaryEntry => _currentDiaryEntry;
   DateTime get selectedDate => _selectedDate;
   bool get isLoading => _loading;
 
-  /// Get all currently "sticky/active" events
+  /// Get all currently "sticky/active" events (cached)
   List<CalendarEventModel> get stickyEvents {
     final now = DateTime.now();
-    return _events.where((event) => event.isSticky(now)).toList()
-      ..sort((a, b) {
-        final aNext = a.getNextOccurrence(now);
-        final bNext = b.getNextOccurrence(now);
-        return aNext.compareTo(bNext);
-      });
+    // Invalidate cache if more than 1 minute has passed
+    if (_stickyEventsCache == null ||
+        _stickyEventsCacheTime == null ||
+        now.difference(_stickyEventsCacheTime!).inMinutes > 1) {
+      _stickyEventsCache = _events.where((event) => event.isSticky(now)).toList()
+        ..sort((a, b) {
+          final aNext = a.getNextOccurrence(now);
+          final bNext = b.getNextOccurrence(now);
+          return aNext.compareTo(bNext);
+        });
+      _stickyEventsCacheTime = now;
+    }
+    return _stickyEventsCache!;
   }
 
-  /// Get events for a specific date (considering recurrence)
+  /// Get events for a specific date (considering recurrence) - uses cache
   List<CalendarEventModel> getEventsForDate(DateTime date) {
-    // Normalize input date to midnight for comparison
     final dateOnly = DateTime(date.year, date.month, date.day);
+    return _eventsByDateCache[dateOnly] ?? [];
+  }
+
+  /// Get events that have a warning window active for a specific date - uses cache
+  List<CalendarEventModel> getWarningEventsForDate(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    return _warningEventsByDateCache[dateOnly] ?? [];
+  }
+
+  /// Pre-cache events for a date range (typically a month)
+  /// This should be called when the displayed month changes to avoid calculations during build
+  void precacheEventsForMonth(DateTime month) {
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
     
+    // Cache 1 month before and after for smooth scrolling
+    final cacheStart = DateTime(firstDay.year, firstDay.month - 1, 1);
+    final cacheEnd = DateTime(lastDay.year, lastDay.month + 1, 0);
+    
+    _rebuildCacheForRange(cacheStart, cacheEnd);
+  }
+
+  /// Rebuilds the cache for a specific date range
+  void _rebuildCacheForRange(DateTime startDate, DateTime endDate) {
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    
+    // Clear existing cache entries in this range
+    _eventsByDateCache.removeWhere((date, _) => 
+      date.isAfter(start.subtract(const Duration(days: 1))) && 
+      date.isBefore(end.add(const Duration(days: 1))));
+    _warningEventsByDateCache.removeWhere((date, _) => 
+      date.isAfter(start.subtract(const Duration(days: 1))) && 
+      date.isBefore(end.add(const Duration(days: 1))));
+    
+    // Rebuild cache for each day in range
+    var currentDate = start;
+    while (!currentDate.isAfter(end)) {
+      final dateOnly = DateTime(currentDate.year, currentDate.month, currentDate.day);
+      
+      // Calculate events for this date
+      final eventsForDate = _calculateEventsForDate(dateOnly);
+      if (eventsForDate.isNotEmpty) {
+        _eventsByDateCache[dateOnly] = eventsForDate;
+      }
+      
+      // Calculate warning events for this date
+      final warningEvents = _calculateWarningEventsForDate(dateOnly);
+      if (warningEvents.isNotEmpty) {
+        _warningEventsByDateCache[dateOnly] = warningEvents;
+      }
+      
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+  }
+
+  /// Internal method to calculate events for a date (used for cache building)
+  List<CalendarEventModel> _calculateEventsForDate(DateTime dateOnly) {
     return _events.where((event) {
       // For non-recurring events, check if the event date matches
       if (event.recurrenceType == RecurrenceType.none) {
@@ -98,10 +168,8 @@ class CalendarViewModel extends ChangeNotifier {
     }).toList();
   }
 
-  /// Get events that have a warning window active for a specific date
-  List<CalendarEventModel> getWarningEventsForDate(DateTime date) {
-    // Normalize input date to midnight for comparison
-    final dateOnly = DateTime(date.year, date.month, date.day);
+  /// Internal method to calculate warning events for a date (used for cache building)
+  List<CalendarEventModel> _calculateWarningEventsForDate(DateTime dateOnly) {
     return _events.where((event) {
       // Get the next occurrence from the start of the day
       final nextOccurrence = event.getNextOccurrence(dateOnly);
@@ -137,6 +205,11 @@ class CalendarViewModel extends ChangeNotifier {
 
   Future<void> loadEvents() async {
     _events = await _repository.getAllEvents();
+    // Clear caches when events are reloaded
+    _eventsByDateCache.clear();
+    _warningEventsByDateCache.clear();
+    _stickyEventsCache = null;
+    _stickyEventsCacheTime = null;
     notifyListeners();
   }
 

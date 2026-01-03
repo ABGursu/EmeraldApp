@@ -26,7 +26,11 @@ class _SupplementLoggerScreenState extends State<SupplementLoggerScreen> {
         title: const Text('Log Supplement'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (context.mounted) {
+              Navigator.pop(context);
+            }
+          },
         ),
       ),
       body: Consumer<SupplementViewModel>(
@@ -350,7 +354,7 @@ class _SupplementLoggerScreenState extends State<SupplementLoggerScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
     }
   }
@@ -360,7 +364,7 @@ class _SupplementLoggerScreenState extends State<SupplementLoggerScreen> {
       context: context,
       initialTime: _selectedTime,
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() => _selectedTime = picked);
     }
   }
@@ -385,7 +389,7 @@ class _SupplementLoggerScreenState extends State<SupplementLoggerScreen> {
         date: dateTime,
       );
 
-      if (mounted) {
+      if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Logged ${_selectedProduct!.name}'),

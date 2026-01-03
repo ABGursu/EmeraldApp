@@ -45,55 +45,63 @@ class QuickFilterBar<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final itemCount = items.length + (showAllOption ? 1 : 0);
+    
     return SizedBox(
       height: 50,
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        children: [
-          if (showAllOption) ...[
-            ChoiceChip(
-              label: Text(allOptionLabel),
-              selected: selectedItem == null,
-              onSelected: (selected) {
-                if (selected) {
-                  onItemSelected(null);
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-          ],
-          ...items.map((item) {
-            final isSelected = _isItemSelected(item);
-            final itemName = getItemName?.call(item) ?? item.toString();
-            final colorValue = getItemColor?.call(item);
-
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          // "All" option is first if enabled
+          if (showAllOption && index == 0) {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onLongPress: onItemLongPress != null
-                    ? () => onItemLongPress!(item)
-                    : null,
-                child: ChoiceChip(
-                  label: Text(
-                    itemName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    onItemSelected(selected ? item : null);
-                  },
-                  avatar: colorValue != null
-                      ? CircleAvatar(
-                          backgroundColor: Color(colorValue),
-                          radius: 8,
-                        )
-                      : null,
-                ),
+              child: ChoiceChip(
+                label: Text(allOptionLabel),
+                selected: selectedItem == null,
+                onSelected: (selected) {
+                  if (selected) {
+                    onItemSelected(null);
+                  }
+                },
               ),
             );
-          }),
-        ],
+          }
+          
+          // Regular items
+          final itemIndex = showAllOption ? index - 1 : index;
+          final item = items[itemIndex];
+          final isSelected = _isItemSelected(item);
+          final itemName = getItemName?.call(item) ?? item.toString();
+          final colorValue = getItemColor?.call(item);
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onLongPress: onItemLongPress != null
+                  ? () => onItemLongPress!(item)
+                  : null,
+              child: ChoiceChip(
+                label: Text(
+                  itemName,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                selected: isSelected,
+                onSelected: (selected) {
+                  onItemSelected(selected ? item : null);
+                },
+                avatar: colorValue != null
+                    ? CircleAvatar(
+                        backgroundColor: Color(colorValue),
+                        radius: 8,
+                      )
+                    : null,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

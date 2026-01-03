@@ -413,15 +413,19 @@ class _ShoppingItemTile extends StatelessWidget {
               leading: const Icon(Icons.edit),
               title: const Text('Edit'),
               onTap: () {
-                Navigator.pop(context);
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => ChangeNotifierProvider.value(
-                    value: vm,
-                    child: AddEditShoppingItemSheet(item: item),
-                  ),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+                if (context.mounted) {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => ChangeNotifierProvider.value(
+                      value: vm,
+                      child: AddEditShoppingItemSheet(item: item),
+                    ),
+                  );
+                }
               },
             ),
             if (item.isPurchased)
@@ -429,7 +433,9 @@ class _ShoppingItemTile extends StatelessWidget {
                 leading: const Icon(Icons.undo),
                 title: const Text('Unpurchase'),
                 onTap: () async {
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                   await vm.unpurchaseItem(item: item, balanceVm: balanceVm);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -442,8 +448,12 @@ class _ShoppingItemTile extends StatelessWidget {
               leading: const Icon(Icons.delete, color: Colors.red),
               title: const Text('Delete', style: TextStyle(color: Colors.red)),
               onTap: () async {
-                Navigator.pop(context);
-                await _showDeleteConfirmation(context, item, vm, balanceVm);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+                if (context.mounted) {
+                  await _showDeleteConfirmation(context, item, vm, balanceVm);
+                }
               },
             ),
           ],

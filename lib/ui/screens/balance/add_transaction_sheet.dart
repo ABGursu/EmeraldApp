@@ -107,7 +107,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
                     ),
                   ],
                 ),

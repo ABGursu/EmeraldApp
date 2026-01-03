@@ -474,16 +474,30 @@ class _TransactionList extends StatelessWidget {
   final Map<DateTime, List<TransactionModel>> grouped;
   final List<ColorCodedItem> tags;
 
+  /// Converts the grouped map into a list of entries for efficient iteration
+  /// This allows ListView.builder to only render visible date groups
+  List<MapEntry<DateTime, List<TransactionModel>>> get _sortedEntries {
+    return grouped.entries.toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (grouped.isEmpty) {
       return const Center(child: Text('No transactions yet'));
     }
-    return ListView(
+    
+    final entries = _sortedEntries;
+    
+    // Use ListView.builder to only render visible date groups
+    // Each date group typically has < 20 transactions, which is acceptable
+    return ListView.builder(
       padding: const EdgeInsets.all(12),
-      children: grouped.entries.map((entry) {
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        final entry = entries[index];
         final date = entry.key;
         final transactions = entry.value;
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -497,32 +511,28 @@ class _TransactionList extends StatelessWidget {
             Card(
               child: Column(
                 children: transactions
-                    .map((tx) => _TransactionTile(
-                          transaction: tx,
-                          tagName: tags
-                              .firstWhere(
-                                (t) => t.id == tx.tagId,
-                                orElse: () => const ColorCodedItem(
-                                    id: '', name: 'Untagged', colorValue: 0),
-                              )
-                              .name,
-                          colorValue: tags
-                              .firstWhere(
-                                (t) => t.id == tx.tagId,
-                                orElse: () => const ColorCodedItem(
-                                    id: '',
-                                    name: 'Untagged',
-                                    colorValue: 0xFF9E9E9E),
-                              )
-                              .colorValue,
-                          tags: tags,
-                        ))
+                    .map((tx) {
+                      final tag = tags.firstWhere(
+                        (t) => t.id == tx.tagId,
+                        orElse: () => const ColorCodedItem(
+                          id: '',
+                          name: 'Untagged',
+                          colorValue: 0xFF9E9E9E,
+                        ),
+                      );
+                      return _TransactionTile(
+                        transaction: tx,
+                        tagName: tag.name,
+                        colorValue: tag.colorValue,
+                        tags: tags,
+                      );
+                    })
                     .toList(),
               ),
             ),
           ],
         );
-      }).toList(),
+      },
     );
   }
 }

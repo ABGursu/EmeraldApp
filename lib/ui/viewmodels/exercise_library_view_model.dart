@@ -19,12 +19,29 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
   String _routineSearchQuery = '';
   String? _selectedBodyPart;
 
+  // Cache for filteredExerciseDefinitions to avoid recalculation on every access
+  List<ExerciseDefinition>? _filteredExerciseDefinitionsCache;
+  String? _cachedSearchQuery;
+  String? _cachedBodyPart;
+  int? _cachedDefinitionsHash; // Simple hash based on list length
+
   List<ExerciseDefinition> get exerciseDefinitions => _exerciseDefinitions;
   List<Routine> get routines => _routines;
   bool get isLoading => _loading;
 
   // Filtered getters
   List<ExerciseDefinition> get filteredExerciseDefinitions {
+    // Calculate simple hash for cache validation
+    final currentHash = _exerciseDefinitions.length.hashCode;
+    
+    // Check if cache is still valid
+    if (_filteredExerciseDefinitionsCache != null &&
+        _cachedSearchQuery == _exerciseSearchQuery &&
+        _cachedBodyPart == _selectedBodyPart &&
+        _cachedDefinitionsHash == currentHash) {
+      return _filteredExerciseDefinitionsCache!;
+    }
+
     var filtered = _exerciseDefinitions;
 
     // Filter by body part
@@ -42,7 +59,13 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
           .toList();
     }
 
-    return filtered;
+    // Update cache
+    _filteredExerciseDefinitionsCache = filtered;
+    _cachedSearchQuery = _exerciseSearchQuery;
+    _cachedBodyPart = _selectedBodyPart;
+    _cachedDefinitionsHash = currentHash;
+
+    return _filteredExerciseDefinitionsCache!;
   }
 
   List<Routine> get filteredRoutines {
@@ -80,6 +103,7 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     _exerciseDefinitions = await _repository.getAllExerciseDefinitions();
+    _filteredExerciseDefinitionsCache = null; // Invalidate cache when definitions change
     _loading = false;
     notifyListeners();
   }
@@ -196,6 +220,7 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
   // Search and Filter
   void setExerciseSearchQuery(String query) {
     _exerciseSearchQuery = query;
+    _filteredExerciseDefinitionsCache = null; // Invalidate cache when search changes
     notifyListeners();
   }
 
@@ -206,12 +231,14 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
 
   void setSelectedBodyPart(String? bodyPart) {
     _selectedBodyPart = bodyPart;
+    _filteredExerciseDefinitionsCache = null; // Invalidate cache when filter changes
     notifyListeners();
   }
 
   void clearExerciseFilters() {
     _exerciseSearchQuery = '';
     _selectedBodyPart = null;
+    _filteredExerciseDefinitionsCache = null; // Invalidate cache when filters cleared
     notifyListeners();
   }
 
