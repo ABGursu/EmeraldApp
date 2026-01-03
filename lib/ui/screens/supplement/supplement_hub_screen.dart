@@ -434,28 +434,31 @@ class SupplementHubScreen extends StatelessWidget {
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  void _showExportDialog(BuildContext context) {
-    final vm = context.read<SupplementViewModel>();
+  void _showExportDialog(BuildContext mainContext) {
+    final vm = mainContext.read<SupplementViewModel>();
     
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: mainContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Export Supplement Logs'),
         content: const Text(
           'Select a date range to export your supplement history to a text file.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
+              
+              // Use main context for date picker
+              if (!mainContext.mounted) return;
               
               // Show date range picker
               final range = await showDateRangePicker(
-                context: context,
+                context: mainContext,
                 firstDate: DateTime(2000),
                 lastDate: DateTime.now().add(const Duration(days: 365)),
                 initialDateRange: vm.logs.isNotEmpty
@@ -466,39 +469,85 @@ class SupplementHubScreen extends StatelessWidget {
                     : null,
               );
               
-              if (range != null && context.mounted) {
-                try {
-                  final path = await vm.exportLogs(
-                    from: range.start,
-                    to: range.end.add(const Duration(
-                      hours: 23,
-                      minutes: 59,
-                      seconds: 59,
-                    )), // inclusive end
+              if (range == null) return;
+              
+              // Check context again after date picker
+              if (!mainContext.mounted) return;
+              
+              // Show loading indicator
+              showDialog(
+                context: mainContext,
+                barrierDismissible: false,
+                builder: (loadingContext) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Exporting...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              
+              try {
+                final path = await vm.exportLogs(
+                  from: range.start,
+                  to: range.end.add(const Duration(
+                    hours: 23,
+                    minutes: 59,
+                    seconds: 59,
+                  )), // inclusive end
+                );
+                
+                if (!mainContext.mounted) return;
+                Navigator.of(mainContext).pop(); // Close loading dialog
+                
+                if (mainContext.mounted) {
+                  ScaffoldMessenger.of(mainContext).showSnackBar(
+                    SnackBar(
+                      content: Text('Export başarılı!\nDosya: $path'),
+                      duration: const Duration(seconds: 5),
+                      action: SnackBarAction(
+                        label: 'Tamam',
+                        onPressed: () {},
+                      ),
+                    ),
                   );
+                }
+              } catch (e) {
+                if (!mainContext.mounted) return;
+                Navigator.of(mainContext).pop(); // Close loading dialog
+                
+                if (mainContext.mounted) {
+                  String errorMessage = 'Export başarısız: ';
+                  if (e.toString().contains('Permission') || 
+                      e.toString().contains('permission') ||
+                      e.toString().contains('denied')) {
+                    errorMessage += 'Depolama izni gerekli. Lütfen ayarlardan izin verin.';
+                  } else if (e.toString().contains('No such file') ||
+                             e.toString().contains('Directory')) {
+                    errorMessage += 'Dizin oluşturulamadı. Fallback dizin kullanılıyor.';
+                  } else {
+                    errorMessage += e.toString();
+                  }
                   
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Exported to: $path'),
-                        duration: const Duration(seconds: 5),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          onPressed: () {},
-                        ),
+                  ScaffoldMessenger.of(mainContext).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMessage),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 6),
+                      action: SnackBarAction(
+                        label: 'Tamam',
+                        onPressed: () {},
                       ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Export failed: $e'),
-                        backgroundColor: Colors.red,
-                        duration: const Duration(seconds: 4),
-                      ),
-                    );
-                  }
+                    ),
+                  );
                 }
               }
             },

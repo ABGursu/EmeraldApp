@@ -128,9 +128,10 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   decoration: const InputDecoration(
                     labelText: 'Estimated Price *',
                     border: OutlineInputBorder(),
-                    prefixText: '\$ ',
+                    prefixText: 'TL ',
                   ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                   validator: (v) {
                     final value = double.tryParse(v ?? '');
                     if (value == null || value <= 0) {
@@ -141,25 +142,31 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                 ),
                 const SizedBox(height: 16),
                 // Priority Selection
-                Text(
-                  'Priority *',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<ShoppingPriority>(
-                  segments: ShoppingPriority.values.map((priority) {
-                    return ButtonSegment<ShoppingPriority>(
+                DropdownButtonFormField<ShoppingPriority>(
+                  initialValue: _selectedPriority,
+                  decoration: const InputDecoration(
+                    labelText: 'Priority *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ShoppingPriority.values.map((priority) {
+                    return DropdownMenuItem<ShoppingPriority>(
                       value: priority,
-                      label: Text(priority.label),
-                      icon: _getPriorityIcon(priority),
+                      child: Row(
+                        children: [
+                          _buildPriorityColorIndicator(priority),
+                          const SizedBox(width: 12),
+                          Text(priority.label),
+                        ],
+                      ),
                     );
                   }).toList(),
-                  selected: {_selectedPriority},
-                  onSelectionChanged: (Set<ShoppingPriority> selection) {
-                    setState(() => _selectedPriority = selection.first);
+                  onChanged: (priority) {
+                    if (priority != null) {
+                      setState(() => _selectedPriority = priority);
+                    }
                   },
+                  validator: (value) =>
+                      value == null ? 'Select a priority' : null,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -195,7 +202,8 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   initialValue: _selectedTag,
                   onEditItem: (item, name, color) async {
                     final balanceVm = context.read<BalanceViewModel>();
-                    final tag = balanceVm.tags.firstWhere((t) => t.id == item.id);
+                    final tag =
+                        balanceVm.tags.firstWhere((t) => t.id == item.id);
                     final updated = tag.copyWith(name: name, colorValue: color);
                     await balanceVm.updateTag(updated);
                     await vm.loadTags(); // Reload tags in shopping view model
@@ -247,19 +255,38 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
     );
   }
 
-  Icon _getPriorityIcon(ShoppingPriority priority) {
+  Widget _buildPriorityColorIndicator(ShoppingPriority priority) {
+    Color color;
+    IconData icon;
+
     switch (priority) {
       case ShoppingPriority.asap:
-        return const Icon(Icons.priority_high, size: 18);
+        color = Colors.red;
+        icon = Icons.priority_high;
+        break;
       case ShoppingPriority.high:
-        return const Icon(Icons.arrow_upward, size: 18);
+        color = Colors.orange;
+        icon = Icons.arrow_upward;
+        break;
       case ShoppingPriority.mid:
-        return const Icon(Icons.remove, size: 18);
+        color = Colors.blue;
+        icon = Icons.remove;
+        break;
       case ShoppingPriority.low:
-        return const Icon(Icons.arrow_downward, size: 18);
+        color = Colors.grey;
+        icon = Icons.arrow_downward;
+        break;
       case ShoppingPriority.future:
-        return const Icon(Icons.schedule, size: 18);
+        color = Colors.grey.shade600;
+        icon = Icons.schedule;
+        break;
     }
+
+    return CircleAvatar(
+      backgroundColor: color.withValues(alpha: 0.2),
+      radius: 12,
+      child: Icon(icon, size: 14, color: color),
+    );
   }
 
   Future<void> _saveItem(
@@ -309,4 +336,3 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
     }
   }
 }
-

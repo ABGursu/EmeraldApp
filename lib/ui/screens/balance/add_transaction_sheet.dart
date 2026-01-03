@@ -130,6 +130,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   decoration: const InputDecoration(
                     labelText: 'Amount',
                     border: OutlineInputBorder(),
+                    prefixText: 'TL ',
                   ),
                   keyboardType: TextInputType.number,
                   validator: (v) {

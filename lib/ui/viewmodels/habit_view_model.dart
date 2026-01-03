@@ -328,20 +328,25 @@ class HabitViewModel extends ChangeNotifier {
 
     for (final dayData in data) {
       final dateStr = _formatDate(dayData.date);
-      final scoreStr = dayData.rating != null
-          ? 'Score: ${dayData.rating!.score}/10'
-          : 'Score: -';
-
+      
+      // Date header
+      buffer.writeln(dateStr);
+      
+      // Habits for this day
       for (final habitData in dayData.habits) {
         final goalName = habitData.goal?.title ?? 'No Goal';
         final status = habitData.completed ? 'DONE' : 'NOT DONE';
-        buffer.writeln(
-            '$dateStr | $scoreStr | ${habitData.habit.title} ($goalName): $status');
+        buffer.writeln('  ${habitData.habit.title} ($goalName): $status');
       }
 
-      // Add daily note if present
+      // Day Score (if available) - comes after habits, before note
+      if (dayData.rating != null) {
+        buffer.writeln('Day Score: ${dayData.rating!.score}/10');
+      }
+
+      // Daily note (if present) - comes after score
       if (dayData.rating?.note != null && dayData.rating!.note!.isNotEmpty) {
-        buffer.writeln('$dateStr | Note: ${dayData.rating!.note}');
+        buffer.writeln('Note: ${dayData.rating!.note}');
       }
 
       buffer.writeln();

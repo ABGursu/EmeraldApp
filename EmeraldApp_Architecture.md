@@ -1460,18 +1460,36 @@ Future<Directory> _getExportDir() async {
 
 **Format:**
 ```
-YYYY-MM-DD | Score: X/10 | [Habit Name] ([Goal Name]): DONE/NOT DONE
-YYYY-MM-DD | Note: [Daily Note]
+YYYY-MM-DD
+  [Habit Name] ([Goal Name]): DONE/NOT DONE
+  [Habit Name] ([Goal Name]): DONE/NOT DONE
+Day Score: X/10
+Note: [Daily Note]
 ```
 
 **Example:**
 ```
-2025-12-23 | Score: 8/10 | Morning Run (Fitness): DONE
-2025-12-23 | Score: 8/10 | Read 30 min (Learning): DONE
-2025-12-23 | Note: Great day!
+2025-12-23
+  Morning Run (Fitness): DONE
+  Read 30 min (Learning): DONE
+  Meditation (Wellness): NOT DONE
+Day Score: 8/10
+Note: Great day!
+
+2025-12-22
+  Morning Run (Fitness): DONE
+  Read 30 min (Learning): NOT DONE
+Day Score: 6/10
+Note: Struggled with focus
 ```
 
 **File Name:** `habits_{fromTimestamp}_{toTimestamp}.txt`
+
+**Notes:**
+- Format is day-focused: Each day has a single Day Score (shown after habits, before note)
+- Habits are listed under the date with indentation
+- Day Score appears after habits, before the note
+- Notes appear at the bottom if present
 
 ### 5.4 Balance Sheet Export
 
@@ -1479,17 +1497,21 @@ YYYY-MM-DD | Note: [Daily Note]
 
 **Format:**
 ```
-[dd.MM.yyyy HH:mm]: [Tag Name] [Amount]
+[dd.MM.yyyy HH:mm]: [Tag Name] [Amount] TL
 ```
 
 **Example:**
 ```
-23.12.2025 10:00: Food -150.00
-23.12.2025 14:30: Transport -25.50
-23.12.2025 18:00: Salary 5000.00
+23.12.2025 10:00: Food -150.00 TL
+23.12.2025 14:30: Transport -25.50 TL
+23.12.2025 18:00: Salary 5000.00 TL
 ```
 
 **File Name:** `transactions_{fromTimestamp}_{toTimestamp}.txt`
+
+**Notes:**
+- All currency values are displayed with "TL" suffix
+- Consistent formatting across all Balance Sheet exports
 
 ### 5.5 Supplement Logger Export
 
@@ -1497,45 +1519,73 @@ YYYY-MM-DD | Note: [Daily Note]
 
 **Format:**
 ```
-[dd.MM.yyyy HH:mm]: [Product Name] x[Servings]
-  - [Ingredient Name]: [Amount] [Unit]
-  - [Ingredient Name]: [Amount] [Unit]
+dd.MM.yyyy:
+  - [Ingredient Name]: [Total Amount] [Unit]
+  - [Ingredient Name]: [Total Amount] [Unit]
+  - ...
 ```
 
 **Example:**
 ```
-23.12.2025 08:00: MultiVitamin x1
+20.12.2025:
   - Vitamin D3: 25 mg
   - Vitamin C: 80 mg
   - Magnesium: 75 mg
+  - Zinc: 15 mg
 
-23.12.2025 20:00: Omega 3 x2
+21.12.2025:
+  - Vitamin D3: 25 mg
+  - Vitamin C: 80 mg
   - Fish Oil: 2000 mg
   - EPA: 720 mg
   - DHA: 480 mg
+
+22.12.2025:
+  - Vitamin D3: 25 mg
+  - Vitamin C: 80 mg
+  - Whey Protein: 25 g
+  - BCAAs: 5 g
 ```
 
 **File Name:** `supplements_{fromTimestamp}_{toTimestamp}.txt`
 
+**Notes:**
+- Format is day-focused: Shows daily totals for each ingredient (not individual log entries)
+- Only date is shown (no time)
+- Dates are sorted chronologically (oldest → newest)
+- Ingredients are sorted alphabetically within each day
+- Each day shows the total intake of all ingredients consumed that day
+
 ### 5.6 Backup Strategy
 
 **Current Implementation:**
-- Manual export per module
-- Text file format (human-readable)
+- Manual export per module (TXT files)
+- Full system backup via JSON (`BackupViewModel`)
 - Files saved to external storage (accessible via file manager)
 
+**Limitations:**
+- **Large Databases:** Text/JSON export becomes slow for 100MB+ databases
+- **Memory Issues:** Loading entire database into memory for JSON export can cause OOM
+- **No Direct DB Backup:** `.db` file is not directly copied/backed up
+
 **Future Enhancement Opportunities:**
-1. **Full Database Backup:**
-   - Export entire SQLite database file
-   - Import/restore functionality
+1. **Direct Database Backup:**
+   - Copy `.db` file directly using `File.copy()`
+   - Compress with `gzip` or `zip`
+   - Store in external storage or cloud
+   - **Recommended for databases >50MB**
 
 2. **Cloud Backup:**
    - Integrate with Google Drive / Dropbox
    - Automatic periodic backups
 
-3. **Compressed Backup:**
-   - Zip all export files together
-   - Include database file
+3. **Incremental Backup:**
+   - Only backup changed data since last backup
+   - Reduces backup size and time
+
+4. **Streaming Export:**
+   - For very large datasets, use streaming JSON writer
+   - Prevents OOM errors on low-memory devices
 
 ---
 
@@ -1652,9 +1702,184 @@ lib/
 
 ---
 
-## 7. Future Scalability Notes
+## 7. Critical Technical Decisions & Performance Considerations
 
-### 7.1 Adding a New Feature (Example: "Graph Feature")
+### 7.1 Rich Text Implementation (Diary Entries)
+
+**Current Implementation:**
+- **Status:** Plain text only (no rich text package)
+- **Storage:** Diary entries are stored as plain `TEXT` in SQLite
+- **UI Component:** Standard Flutter `TextField` (not a rich text editor)
+- **Model Comment:** Model documentation mentions "Rich Text / HTML / Markdown" but this is **not yet implemented**
+
+**Technical Details:**
+- Content is stored as plain string in `diary_entries.content` column
+- No rich text packages (e.g., `flutter_quill`, `flutter_markdown`) are currently used
+- Future implementation would require:
+  - Choosing a rich text package (flutter_quill uses Delta/JSON format)
+  - Deciding storage format: JSON Delta vs HTML vs Markdown
+  - Search functionality: Rich text formats make SQL `LIKE %query%` searches difficult
+  - Consider full-text search (FTS) or separate plain text index for search
+
+**Search Considerations:**
+- Current plain text allows simple SQL `LIKE` queries
+- Rich text (Delta/JSON) would require:
+  - Full-text search (FTS) extension
+  - Or separate plain text extraction for search
+  - Or client-side filtering after loading entries
+
+**Recommendation:**
+- If search is required: Consider storing both rich text (formatted) and plain text (for search)
+- If search is not required: Can use any rich text format (Delta/JSON/HTML)
+
+---
+
+### 7.2 App Lifecycle & Memory Management
+
+**DateProvider Lifecycle:**
+- **Implementation:** Uses `WidgetsBindingObserver` to monitor app lifecycle
+- **Behavior:** Automatically resets to today when app resumes if day has changed
+- **Memory:** Lightweight provider, no heavy state
+
+**Database Initialization:**
+- **Location:** `main()` function
+- **Process:** `await DatabaseHelper.instance.database` (lazy initialization)
+- **Timing:** Runs during app startup, before UI is shown
+- **Duration:** 
+  - First run: Creates tables + seeds data (~100-500ms depending on device)
+  - Subsequent runs: Opens existing database (~50-200ms)
+  - Migrations: Run on upgrade, can take longer if data migration needed
+
+**Heavy Operations:**
+- **Seeding:** Hardcoded exercise definitions and routines are seeded on first create
+- **Migrations:** Database version upgrades run in `_onUpgrade()` method
+- **Current Strategy:** All initialization happens in `main()`, blocking app start
+- **No Splash Screen:** App shows main menu immediately after database init
+
+**Performance Notes:**
+- Database is singleton, opened once and reused
+- ViewModels call `init()` methods which load data asynchronously
+- No blocking operations in UI thread
+- Consider adding splash screen if initialization takes >500ms on slower devices
+
+**Memory Considerations:**
+- All ViewModels are created in `main()` and kept in memory
+- Data is loaded lazily (only when screen is accessed)
+- Large lists use `ListView.builder` for efficient rendering (see 7.4)
+
+---
+
+### 7.3 Backup/Restore Strategy
+
+**Current Implementation:**
+- **Export Format:** Text files (TXT) for individual modules
+- **Full Backup:** JSON format via `BackupViewModel`
+- **Location:** `/storage/emulated/0/Documents/EmeraldApp` (with fallback)
+
+**Limitations:**
+- **Large Databases:** Text/JSON export becomes slow for 100MB+ databases
+- **Memory Issues:** Loading entire database into memory for JSON export can cause OOM (Out of Memory)
+- **No Direct DB Backup:** `.db` file is not directly copied/backed up
+
+**Current Export Methods:**
+1. **Module-Specific Exports:** Individual TXT files per module
+   - Balance Sheet: `transactions_*.txt`
+   - Exercise Logger: `workout_logs_*.txt`
+   - Habit Logger: `habits_*.txt`
+   - Supplement Logger: `supplements_*.txt`
+2. **Full System Backup:** JSON file via `BackupViewModel`
+   - Exports all data from all modules
+   - Can be restored via import function
+
+**Future Recommendations:**
+- **Direct DB Backup:** For large databases (>50MB), consider:
+  - Copying `.db` file directly using `File.copy()`
+  - Compressing with `gzip` or `zip`
+  - Storing in external storage or cloud
+- **Incremental Backup:** Only backup changed data since last backup
+- **Streaming Export:** For very large datasets, use streaming JSON writer instead of loading all into memory
+- **Database Sharding:** Split large tables into date-based partitions
+
+**Performance Considerations:**
+- Current JSON export loads all data into memory
+- For 100MB+ databases, this can cause:
+  - Slow export (10-30 seconds)
+  - OOM crashes on low-memory devices
+  - UI freezing during export
+
+**Recommended Approach:**
+```dart
+// Future implementation for large databases
+Future<void> exportDatabaseDirectly() async {
+  final dbFile = File(await getDatabasePath());
+  final backupFile = File('${exportDir}/backup_${timestamp}.db');
+  await dbFile.copy(backupFile.path);
+  // Optionally compress
+  await compressFile(backupFile);
+}
+```
+
+---
+
+### 7.4 List Rendering Performance
+
+**Current Implementation:**
+- **Primary Method:** `ListView.builder` (lazy rendering) ✅
+- **Usage:** Used in 95%+ of list screens
+- **Performance:** Efficient, only renders visible items
+
+**ListView.builder Usage:**
+- ✅ Shopping List Screen
+- ✅ Supplement Hub Screen
+- ✅ Exercise Library Screen
+- ✅ Calendar Hub Screen
+- ✅ Habit Goal Manager Screen
+- ✅ Exercise Home Screen (ReorderableListView.builder)
+- ✅ Product Manager Screen
+- ✅ All Events List Screen
+- ✅ Routine Manager Screen
+
+**ListView() Usage (Needs Review):**
+- ⚠️ Balance Screen (`_buildTransactionList`) - Uses `ListView()` with `.map()`
+- ⚠️ Habit Hub Screen - Uses `ListView()` 
+- ⚠️ Backup Settings Screen - Uses `ListView()` (small list, acceptable)
+
+**Performance Impact:**
+- `ListView()` renders all children immediately
+- For large lists (100+ items), this causes:
+  - Slow initial render
+  - High memory usage
+  - UI jank/freezing
+- `ListView.builder()` only renders visible items (~10-20 items)
+- For 1000-item list: `ListView()` renders 1000, `ListView.builder()` renders ~15
+
+**Recommendation:**
+- **Balance Screen:** Convert `ListView()` to `ListView.builder()` for transaction lists
+- **Habit Hub Screen:** Review if list can be large, convert if needed
+- **Backup Settings Screen:** Small list (<10 items), acceptable to use `ListView()`
+
+**Example Fix:**
+```dart
+// ❌ Current (Balance Screen)
+return ListView(
+  children: grouped.entries.map((entry) => _buildGroup(entry)).toList(),
+);
+
+// ✅ Recommended
+return ListView.builder(
+  itemCount: grouped.entries.length,
+  itemBuilder: (context, index) {
+    final entry = grouped.entries.elementAt(index);
+    return _buildGroup(entry);
+  },
+);
+```
+
+---
+
+## 8. Future Scalability Notes
+
+### 8.1 Adding a New Feature (Example: "Graph Feature")
 
 To add a new feature without breaking the existing architecture, follow these steps:
 
@@ -1784,7 +2009,7 @@ IconButton(
 )
 ```
 
-### 7.2 Architecture Principles to Maintain
+### 8.2 Architecture Principles to Maintain
 
 1. **Separation of Concerns:**
    - Models: Pure data
@@ -1812,7 +2037,7 @@ IconButton(
    - Add migration logic in `_onUpgrade()`
    - Test migrations on existing databases
 
-### 7.3 Common Patterns
+### 8.3 Common Patterns
 
 **Adding a New Table:**
 1. Create model in `/data/models/`

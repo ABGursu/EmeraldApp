@@ -209,11 +209,14 @@ class _ShoppingItemTile extends StatelessWidget {
             if (isPurchased && item.actualPrice != null) ...[
               Row(
                 children: [
-                  Text(
-                    item.actualPrice!.toStringAsFixed(2),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Flexible(
+                    child: Text(
+                      '${item.actualPrice!.toStringAsFixed(2)} TL',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   _buildVarianceIndicator(item),

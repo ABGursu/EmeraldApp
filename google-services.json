@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "322428648680",
+    "project_id": "emeraldapp-ab126",
+    "storage_bucket": "emeraldapp-ab126.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:322428648680:android:12a65dcb615ddf4edc9d5d",
+        "android_client_info": {
+          "package_name": "com.emeraldapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDVPzyZMB8aW2uvUbN7bcfjHmOCVz-XEPk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

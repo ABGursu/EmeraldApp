@@ -52,14 +52,44 @@ class _DailyViewScreenState extends State<DailyViewScreen> {
   }
 
   Widget _buildStickyHeader(CalendarViewModel vm) {
-    final stickyEvents = vm.stickyEvents;
+    // Get events for the SELECTED date, not today
+    final selectedDate = vm.selectedDate;
+    final eventsForDate = vm.getEventsForDate(selectedDate);
+    final warningEvents = vm.getWarningEventsForDate(selectedDate);
+    
+    // Combine events on the date and warning events (avoid duplicates)
+    final allRelevantEvents = <CalendarEventModel>[];
+    final eventIds = <String>{};
+    
+    // Add events that occur on the selected date
+    for (final event in eventsForDate) {
+      if (!eventIds.contains(event.id)) {
+        allRelevantEvents.add(event);
+        eventIds.add(event.id);
+      }
+    }
+    
+    // Add warning events (events with active warning window for selected date)
+    for (final event in warningEvents) {
+      if (!eventIds.contains(event.id)) {
+        allRelevantEvents.add(event);
+        eventIds.add(event.id);
+      }
+    }
+    
+    // Sort by next occurrence
+    allRelevantEvents.sort((a, b) {
+      final aNext = a.getNextOccurrence(selectedDate);
+      final bNext = b.getNextOccurrence(selectedDate);
+      return aNext.compareTo(bNext);
+    });
 
-    if (stickyEvents.isEmpty) {
+    if (allRelevantEvents.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
-        child: const Text(
-          'No upcoming events',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        child: Text(
+          'No events for ${formatDate(selectedDate)}',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
       );
     }
@@ -73,13 +103,13 @@ class _DailyViewScreenState extends State<DailyViewScreen> {
           Row(
             children: [
               Icon(
-                Icons.warning_amber_rounded,
-                color: Theme.of(context).colorScheme.error,
+                Icons.event,
+                color: Theme.of(context).colorScheme.primary,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                'Upcoming Events',
+                'Events for ${formatDate(selectedDate)}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -87,27 +117,39 @@ class _DailyViewScreenState extends State<DailyViewScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          ...stickyEvents.map((event) => _buildStickyEventCard(vm, event)),
+          ...allRelevantEvents.map((event) => _buildStickyEventCard(vm, event, selectedDate)),
         ],
       ),
     );
   }
 
-  Widget _buildStickyEventCard(CalendarViewModel vm, CalendarEventModel event) {
+  Widget _buildStickyEventCard(CalendarViewModel vm, CalendarEventModel event, DateTime selectedDate) {
     final tag = vm.getTagById(event.tagId);
-    final timeRemaining = event.getTimeRemaining(DateTime.now());
-    final nextOccurrence = event.getNextOccurrence(DateTime.now());
-
+    final nextOccurrence = event.getNextOccurrence(selectedDate);
+    
+    // Check if event occurs on the selected date
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final nextOccurrenceDateOnly = DateTime(nextOccurrence.year, nextOccurrence.month, nextOccurrence.day);
+    final isOnSelectedDate = selectedDateOnly.isAtSameMomentAs(nextOccurrenceDateOnly);
+    
     String timeText;
-    if (timeRemaining.inDays > 0) {
-      timeText =
-          'in ${timeRemaining.inDays} day${timeRemaining.inDays > 1 ? 's' : ''}';
-    } else if (timeRemaining.inHours > 0) {
-      timeText =
-          'in ${timeRemaining.inHours} hour${timeRemaining.inHours > 1 ? 's' : ''}';
+    if (isOnSelectedDate) {
+      // Event occurs on selected date - show the time
+      timeText = formatDateTime(nextOccurrence);
     } else {
-      timeText =
-          'in ${timeRemaining.inMinutes} minute${timeRemaining.inMinutes > 1 ? 's' : ''}';
+      // Event is in the future - show time remaining
+      final timeRemaining = nextOccurrence.difference(selectedDate);
+      if (timeRemaining.inDays > 0) {
+        timeText =
+            'in ${timeRemaining.inDays} day${timeRemaining.inDays > 1 ? 's' : ''}';
+      } else if (timeRemaining.inHours > 0) {
+        timeText =
+            'in ${timeRemaining.inHours} hour${timeRemaining.inHours > 1 ? 's' : ''}';
+      } else {
+        timeText =
+            'in ${timeRemaining.inMinutes} minute${timeRemaining.inMinutes > 1 ? 's' : ''}';
+      }
+      timeText += ' • ${formatDateTime(nextOccurrence)}';
     }
 
     return Card(
@@ -130,7 +172,7 @@ class _DailyViewScreenState extends State<DailyViewScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$timeText • ${formatDateTime(nextOccurrence)}'),
+            Text(timeText),
             if (event.description != null && event.description!.isNotEmpty)
               Text(
                 event.description!,

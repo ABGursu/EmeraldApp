@@ -64,7 +64,7 @@ class _MarkPurchasedDialogState extends State<MarkPurchasedDialog> {
               decoration: const InputDecoration(
                 labelText: 'Actual Price *',
                 border: OutlineInputBorder(),
-                prefixText: '\$ ',
+                prefixText: 'TL ',
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,
@@ -87,7 +87,7 @@ class _MarkPurchasedDialogState extends State<MarkPurchasedDialog> {
             if (!widget.isEditing) ...[
               const SizedBox(height: 8),
               Text(
-                'Estimated: ${widget.item.estimatedPrice.toStringAsFixed(2)}',
+                'Estimated: ${widget.item.estimatedPrice.toStringAsFixed(2)} TL',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context)
                           .colorScheme

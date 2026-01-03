@@ -72,12 +72,12 @@ class _PieChartSheetState extends State<PieChartSheet> {
     final buffer = StringBuffer();
     buffer.writeln('Expenses by Tag Chart Export');
     buffer.writeln('Date Range: ${formatDate(_fromDate!)} - ${formatDate(_toDate!)}');
-    buffer.writeln('Total Expenses: ${total.toStringAsFixed(2)}');
+    buffer.writeln('Total Expenses: ${total.toStringAsFixed(2)} TL');
     buffer.writeln('');
     buffer.writeln('Breakdown:');
     for (final entry in data.entries) {
       final percent = total == 0 ? 0 : (entry.value / total) * 100;
-      buffer.writeln('${entry.key.name}: ${entry.value.toStringAsFixed(2)} (${percent.toStringAsFixed(1)}%)');
+      buffer.writeln('${entry.key.name}: ${entry.value.toStringAsFixed(2)} TL (${percent.toStringAsFixed(1)}%)');
     }
 
     final directory = await _getExportDir();

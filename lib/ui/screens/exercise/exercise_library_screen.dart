@@ -24,14 +24,15 @@ class ExerciseLibraryScreen extends StatelessWidget {
                     // Search Bar
                     Padding(
                       padding: const EdgeInsets.all(8.0),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search exercises...',
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search exercises...',
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: vm.exerciseSearchQuery.isNotEmpty
                               ? IconButton(
                                   icon: const Icon(Icons.clear),
-                                  onPressed: () => vm.setExerciseSearchQuery(''),
+                                  onPressed: () =>
+                                      vm.setExerciseSearchQuery(''),
                                 )
                               : null,
                           border: OutlineInputBorder(
@@ -53,7 +54,8 @@ class ExerciseLibraryScreen extends StatelessWidget {
                           _showEditBodyPartDialog(context, bodyPart, vm);
                         },
                         getItemId: (bodyPart) => bodyPart,
-                        getItemName: (bodyPart) => bodyPart.split('(').first.trim(),
+                        getItemName: (bodyPart) =>
+                            bodyPart.split('(').first.trim(),
                         getItemColor: null, // Body parts don't have colors
                       ),
                     // Exercise List
@@ -76,14 +78,16 @@ class ExerciseLibraryScreen extends StatelessWidget {
                                     vm.exerciseDefinitions.isEmpty
                                         ? 'No exercises yet'
                                         : 'No exercises found',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     vm.exerciseDefinitions.isEmpty
                                         ? 'Tap + to add your first exercise'
                                         : 'Try adjusting your search or filter',
-                                    style: Theme.of(context).textTheme.bodyMedium,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ],
                               ),
@@ -92,18 +96,23 @@ class ExerciseLibraryScreen extends StatelessWidget {
                               padding: const EdgeInsets.all(8),
                               itemCount: vm.filteredExerciseDefinitions.length,
                               itemBuilder: (context, index) {
-                                final definition = vm.filteredExerciseDefinitions[index];
+                                final definition =
+                                    vm.filteredExerciseDefinitions[index];
                                 return Card(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                   child: ListTile(
                                     title: Text(definition.name),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         if (definition.defaultType != null)
-                                          Text('Type: ${definition.defaultType}'),
+                                          Text(
+                                              'Type: ${definition.defaultType}'),
                                         if (definition.bodyPart != null)
-                                          Text('Body Part: ${definition.bodyPart}'),
+                                          Text(
+                                              'Body Part: ${definition.bodyPart}'),
                                       ],
                                     ),
                                     trailing: Row(
@@ -114,16 +123,19 @@ class ExerciseLibraryScreen extends StatelessWidget {
                                           onPressed: () => showModalBottomSheet(
                                             context: context,
                                             isScrollControlled: true,
-                                            builder: (_) => ChangeNotifierProvider.value(
+                                            builder: (_) =>
+                                                ChangeNotifierProvider.value(
                                               value: vm,
-                                              child: AddEditExerciseDefinitionSheet(
+                                              child:
+                                                  AddEditExerciseDefinitionSheet(
                                                 definition: definition,
                                               ),
                                             ),
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.red),
                                           onPressed: () => _showDeleteDialog(
                                             context,
                                             vm,
@@ -177,7 +189,8 @@ class ExerciseLibraryScreen extends StatelessWidget {
               if (context.mounted) {
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Exercise "${definition.name}" deleted')),
+                  SnackBar(
+                      content: Text('Exercise "${definition.name}" deleted')),
                 );
               }
             },
@@ -193,8 +206,6 @@ class ExerciseLibraryScreen extends StatelessWidget {
     String bodyPart,
     ExerciseLibraryViewModel vm,
   ) async {
-    String? newBodyPartName;
-    
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
@@ -209,7 +220,6 @@ class ExerciseLibraryScreen extends StatelessWidget {
             ),
             autofocus: true,
             textCapitalization: TextCapitalization.words,
-            onChanged: (value) => newBodyPartName = value,
           ),
           actions: [
             TextButton(
@@ -220,7 +230,6 @@ class ExerciseLibraryScreen extends StatelessWidget {
               onPressed: () {
                 final newName = controller.text.trim();
                 if (newName.isNotEmpty && newName != bodyPart) {
-                  newBodyPartName = newName;
                   Navigator.pop(context, {'old': bodyPart, 'new': newName});
                 } else {
                   Navigator.pop(context);
@@ -236,13 +245,15 @@ class ExerciseLibraryScreen extends StatelessWidget {
     if (result != null) {
       final oldName = result['old']!;
       final newName = result['new']!;
-      
+
       // Update all exercises that use this body part
       await _updateBodyPartInAllExercises(vm, oldName, newName);
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Body part "$oldName" updated to "$newName" in all exercises')),
+          SnackBar(
+              content: Text(
+                  'Body part "$oldName" updated to "$newName" in all exercises')),
         );
       }
     }
@@ -256,13 +267,13 @@ class ExerciseLibraryScreen extends StatelessWidget {
     for (final def in vm.exerciseDefinitions) {
       if (def.bodyPart != null && def.bodyPart!.contains(oldBodyPart)) {
         final parts = def.bodyPart!.split(',').map((s) => s.trim()).toList();
-        final updatedParts = parts.map((p) => p == oldBodyPart ? newBodyPart : p).toList();
+        final updatedParts =
+            parts.map((p) => p == oldBodyPart ? newBodyPart : p).toList();
         final updatedBodyPart = updatedParts.join(',');
-        
+
         final updated = def.copyWith(bodyPart: updatedBodyPart);
         await vm.updateExerciseDefinition(updated);
       }
     }
   }
 }
-

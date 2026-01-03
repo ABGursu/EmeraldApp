@@ -372,7 +372,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
       final tagName =
           _tags.firstWhere((t) => t.id == tx.tagId, orElse: () => TagModel(id: '', name: 'Untagged', colorValue: 0, createdAt: DateTime.now())).name;
       buffer.writeln(
-          '${formatDateTime(tx.date)}: $tagName ${tx.amount.toStringAsFixed(2)}');
+          '${formatDateTime(tx.date)}: $tagName ${tx.amount.toStringAsFixed(2)} TL');
     }
 
     final directory = await _getExportDir();

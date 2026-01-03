@@ -1,8 +1,31 @@
 # EmeraldApp - Critical Bugs & Feature Requests Refactor Plan
 
-**Status:** ⏳ Awaiting Confirmation to Start
+**Status:** ✅ All Original Tasks Completed | ⏳ New Tasks Added
 
 **Architecture:** MVVM + Provider + Singleton SQLite DatabaseHelper
+
+---
+
+## Global Tasks
+
+### ✅ 🌍 Global Task: Currency Standardization
+- [x] **Requirement:** Throughout the ENTIRE application, all currency symbols must be **"TL"** or **"₺"**
+- [x] **Scope:** 
+  - Balance Sheet module ✅
+  - Shopping List module ✅
+  - Budget Settings ✅
+  - Any other modules displaying currency ✅
+- [x] **Action Items:**
+  - Scan codebase for hardcoded "$" or other currency symbols ✅
+  - Replace with "TL" or "₺" ✅
+  - Ensure consistent formatting (e.g., "150.00 TL") ✅
+- [x] **Files Updated:**
+  - `lib/ui/screens/shopping/add_edit_shopping_item_sheet.dart` ✅ (prefixText: 'TL ')
+  - `lib/ui/screens/shopping/mark_purchased_dialog.dart` ✅ (prefixText: 'TL ', estimated price display)
+  - `lib/ui/screens/balance/add_transaction_sheet.dart` ✅ (prefixText: 'TL ')
+  - `lib/ui/viewmodels/balance_view_model.dart` ✅ (export format: "amount TL")
+  - `lib/ui/screens/balance/pie_chart_sheet.dart` ✅ (export format: "amount TL")
+  - `lib/ui/screens/balance/balance_screen.dart` ✅ (already using TL)
 
 ---
 
@@ -80,7 +103,7 @@
 
 ---
 
-### ✅ Task 6: Shopping List - Priority Logic
+### ✅ Task 6: Shopping List - Priority Logic & UI Redesign
 - [x] **Requirement:** Change Priority logic to 5 levels
 - [x] **New Levels:**
   1. Future (1) ✅
@@ -88,14 +111,22 @@
   3. Mid (3) ✅
   4. High (4) ✅
   5. ASAP! (5) ✅
-- [x] **Action Items:**
+- [x] **Action Items (Completed):**
   - Update `ShoppingPriority` enum ✅
   - Update database integer mapping ✅
   - Update UI Dropdown selector ✅
   - Add database migration (v15) ✅
-- [x] **Files to Review:**
+- [x] **UI Redesign Requirement (NEW):**
+  - **Feedback:** Current priority selection widget looks bad/cluttered
+  - **Requirement:** Refactor priority selector in `add_edit_shopping_item_sheet.dart` to use `DropdownButtonFormField` ✅
+  - **Design Details:**
+    * Must look like a standard form input ✅
+    * Each dropdown item should display **Color Indicator** and **Name** ✅ (CircleAvatar with color + icon + label)
+    * Must handle all 5 priority levels ✅
+- [x] **Files Updated:**
   - `lib/data/models/shopping_priority.dart` ✅ Updated
-  - `lib/ui/screens/shopping/` (shopping list screens) ✅ Updated
+  - `lib/ui/screens/shopping/add_edit_shopping_item_sheet.dart` ✅ UI redesigned (SegmentedButton → DropdownButtonFormField)
+  - `lib/ui/screens/shopping/` (other shopping list screens) ✅ Updated
   - `lib/data/local_db/database_helper.dart` ✅ Migration added
 
 ---
@@ -107,10 +138,19 @@
   - Check if `loadEvents()` is called on init ✅ (Added initState in CalendarHubScreen)
   - Check date normalization (midnight logic) for event matching ✅ (Fixed date comparison logic)
   - Verify `Consumer<CalendarViewModel>` is correctly placed in UI ✅ (Already correct)
+- [x] **CRITICAL BUG ADDENDUM:** Daily View shows empty events when date is selected ✅
+  - **Bug:** When a date is selected in Calendar Grid, Daily View header appears empty ✅ FIXED
+  - **Root Cause:** `daily_view_screen.dart` uses `vm.stickyEvents` which always uses `DateTime.now()` instead of `vm.selectedDate` ✅ IDENTIFIED
+  - **Fix:** Changed Daily View to show events for selected date using `getEventsForDate()` and `getWarningEventsForDate()` ✅ IMPLEMENTED
+  - **Changes:**
+    * `_buildStickyHeader` now uses `vm.getEventsForDate(selectedDate)` and `vm.getWarningEventsForDate(selectedDate)`
+    * Combines events on selected date with warning events (avoiding duplicates)
+    * Shows appropriate time text: event time if on selected date, or "in X days" if future
+    * Header title now shows "Events for [selected date]" instead of "Upcoming Events"
 - [x] **Files to Review:**
   - `lib/ui/viewmodels/calendar_view_model.dart` ✅ Fixed `getEventsForDate` and `getWarningEventsForDate`
   - `lib/ui/screens/calendar/calendar_hub_screen.dart` ✅ Added initState to ensure events load
-  - `lib/ui/screens/calendar/daily_view_screen.dart` ✅ Already using Consumer correctly
+  - `lib/ui/screens/calendar/daily_view_screen.dart` ✅ Fixed to use selected date for events
   - `lib/ui/screens/calendar/calendar_view_screen.dart` ✅ Already using Consumer correctly
   - Event loading and date matching logic ✅ Fixed recurring event date matching
 
@@ -119,9 +159,13 @@
 ## Progress Tracker
 
 - **Started:** ✅ Yes
-- **Current Task:** Task 7 - ✅ COMPLETED
-- **Completed:** 7/7
-- **In Progress:** 0/7
+- **Original Tasks Completed:** 7/7 ✅
+- **New Tasks Completed:** 2/2 ✅
+  - Global Currency Standardization ✅
+  - Task 6 UI Redesign ✅
+- **Total Tasks:** 8 (7 original + 1 global)
+- **Completed:** 8/8 ✅
+- **In Progress:** 0/8
 
 ---
 
