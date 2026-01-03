@@ -193,38 +193,44 @@ class ExerciseLibraryScreen extends StatelessWidget {
     String bodyPart,
     ExerciseLibraryViewModel vm,
   ) async {
-    final controller = TextEditingController(text: bodyPart);
+    String? newBodyPartName;
+    
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Body Part'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Body Part Name',
-            border: OutlineInputBorder(),
+      builder: (context) {
+        final controller = TextEditingController(text: bodyPart);
+        return AlertDialog(
+          title: const Text('Edit Body Part'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Body Part Name',
+              border: OutlineInputBorder(),
+            ),
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            onChanged: (value) => newBodyPartName = value,
           ),
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty && newName != bodyPart) {
-                Navigator.pop(context, {'old': bodyPart, 'new': newName});
-              } else {
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty && newName != bodyPart) {
+                  newBodyPartName = newName;
+                  Navigator.pop(context, {'old': bodyPart, 'new': newName});
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
     );
 
     if (result != null) {
@@ -240,7 +246,6 @@ class ExerciseLibraryScreen extends StatelessWidget {
         );
       }
     }
-    controller.dispose();
   }
 
   static Future<void> _updateBodyPartInAllExercises(

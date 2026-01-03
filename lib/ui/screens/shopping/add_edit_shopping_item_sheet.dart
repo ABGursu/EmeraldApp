@@ -38,7 +38,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
       text: widget.item?.quantity?.toString() ?? '',
     );
     _noteController = TextEditingController(text: widget.item?.note ?? '');
-    _selectedPriority = widget.item?.priority ?? ShoppingPriority.medium;
+    _selectedPriority = widget.item?.priority ?? ShoppingPriority.mid;
 
     // Initialize tag selection
     if (widget.item?.tagId != null) {
@@ -249,14 +249,16 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
 
   Icon _getPriorityIcon(ShoppingPriority priority) {
     switch (priority) {
-      case ShoppingPriority.urgent:
+      case ShoppingPriority.asap:
         return const Icon(Icons.priority_high, size: 18);
       case ShoppingPriority.high:
         return const Icon(Icons.arrow_upward, size: 18);
-      case ShoppingPriority.medium:
+      case ShoppingPriority.mid:
         return const Icon(Icons.remove, size: 18);
       case ShoppingPriority.low:
         return const Icon(Icons.arrow_downward, size: 18);
+      case ShoppingPriority.future:
+        return const Icon(Icons.schedule, size: 18);
     }
   }
 

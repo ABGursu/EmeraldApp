@@ -28,6 +28,7 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
   }
 
   void _syncRatingState() {
+    if (!mounted) return;
     final vm = context.read<HabitViewModel>();
     if (vm.selectedDateRating != null) {
       setState(() {
@@ -99,10 +100,12 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () {
+            onPressed: () async {
               vm.setSelectedDate(
                   vm.selectedDate.subtract(const Duration(days: 1)));
-              _syncRatingState();
+              // Wait a bit for data to load, then sync
+              await Future.delayed(const Duration(milliseconds: 100));
+              if (mounted) _syncRatingState();
             },
             icon: const Icon(Icons.chevron_left),
           ),
@@ -129,10 +132,12 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
           IconButton(
             onPressed: isToday
                 ? null
-                : () {
+                : () async {
                     vm.setSelectedDate(
                         vm.selectedDate.add(const Duration(days: 1)));
-                    _syncRatingState();
+                    // Wait a bit for data to load, then sync
+                    await Future.delayed(const Duration(milliseconds: 100));
+                    if (mounted) _syncRatingState();
                   },
             icon: const Icon(Icons.chevron_right),
           ),
@@ -405,9 +410,11 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) {
+    if (picked != null && mounted) {
       vm.setSelectedDate(picked);
-      _syncRatingState();
+      // Wait a bit for data to load, then sync
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (mounted) _syncRatingState();
     }
   }
 

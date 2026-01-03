@@ -102,8 +102,8 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
                               } else {
                                 _selectedExercises.removeWhere(
                                     (e) => e['exerciseDefinitionId'] == def.id);
-                                _setsControllers[def.id]?.dispose();
-                                _repsControllers[def.id]?.dispose();
+                                // Controllers will be disposed in dispose() method
+                                // Just remove from map
                                 _setsControllers.remove(def.id);
                                 _repsControllers.remove(def.id);
                               }

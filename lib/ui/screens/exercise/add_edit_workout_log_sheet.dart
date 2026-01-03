@@ -24,12 +24,16 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
   final TextEditingController _repsController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _exerciseNameController = TextEditingController();
   bool _isLoadingLastLog = false;
   bool _hasPrefilledWeight = false;
 
   @override
   void initState() {
     super.initState();
+    final exerciseName = widget.log?.exerciseName ?? widget.exerciseDefinition?.name ?? '';
+    _exerciseNameController.text = exerciseName;
+    
     if (widget.log != null) {
       // Edit Mode: Pre-fill with existing log data
       final log = widget.log!;
@@ -76,6 +80,7 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
     _repsController.dispose();
     _weightController.dispose();
     _noteController.dispose();
+    _exerciseNameController.dispose();
     super.dispose();
   }
 
@@ -83,7 +88,6 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
   Widget build(BuildContext context) {
     final vm = context.watch<DailyLogViewModel>();
     final isEditing = widget.log != null;
-    final exerciseName = widget.log?.exerciseName ?? widget.exerciseDefinition?.name ?? '';
 
     return Container(
       padding: EdgeInsets.only(
@@ -111,14 +115,14 @@ class _AddEditWorkoutLogSheetState extends State<AddEditWorkoutLogSheet> {
             const SizedBox(height: 16),
             // Exercise Name (read-only)
             TextField(
-              enabled: false,
+              readOnly: true,
               decoration: InputDecoration(
                 labelText: 'Exercise Name',
                 border: const OutlineInputBorder(),
                 filled: true,
                 fillColor: Theme.of(context).disabledColor.withValues(alpha: 0.1),
               ),
-              controller: TextEditingController(text: exerciseName),
+              controller: _exerciseNameController,
             ),
             const SizedBox(height: 8),
             // Sets and Reps

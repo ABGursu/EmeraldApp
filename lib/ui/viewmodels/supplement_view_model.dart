@@ -290,15 +290,54 @@ class SupplementViewModel extends ChangeNotifier with DateRangePersistence {
     final logsInRange = await _repository.getLogs(from: from, to: to);
     final buffer = StringBuffer();
 
+    // === Daily Breakdown Section ===
+    buffer.writeln('=== DAILY BREAKDOWN ===');
+    buffer.writeln();
+    
+    // Group logs by date for better readability
+    final Map<DateTime, List<SupplementLogModel>> groupedByDate = {};
     for (final log in logsInRange) {
-      final details = await _repository.getLogDetails(log.id);
-      buffer.writeln('${formatDateTime(log.date)}: ${log.productNameSnapshot} x${log.servingsCount}');
-      for (final detail in details) {
-        buffer.writeln('  - ${detail.ingredientName}: ${_formatAmount(detail.amountTotal)} ${detail.unit}');
+      final dateKey = DateTime(log.date.year, log.date.month, log.date.day);
+      groupedByDate.putIfAbsent(dateKey, () => []).add(log);
+    }
+    
+    // Sort dates (newest first)
+    final sortedDates = groupedByDate.keys.toList()..sort((a, b) => b.compareTo(a));
+    
+    for (final date in sortedDates) {
+      final logsForDate = groupedByDate[date]!;
+      buffer.writeln('${formatDate(date)}:');
+      
+      for (final log in logsForDate) {
+        final details = await _repository.getLogDetails(log.id);
+        buffer.writeln('  ${formatDateTime(log.date)}: ${log.productNameSnapshot} x${log.servingsCount}');
+        for (final detail in details) {
+          buffer.writeln('    - ${detail.ingredientName}: ${_formatAmount(detail.amountTotal)} ${detail.unit}');
+        }
       }
       buffer.writeln();
     }
 
+    // === Summary Section ===
+    buffer.writeln('=== SUMMARY ===');
+    buffer.writeln('Total Ingredients Intake for Period (${formatDate(from)} - ${formatDate(to)}):');
+    buffer.writeln();
+    
+    final totalIntake = await getTotalIntake(from: from, to: to);
+    
+    if (totalIntake.isEmpty) {
+      buffer.writeln('No supplements logged in this period.');
+    } else {
+      // Sort ingredients alphabetically
+      final sortedIngredients = totalIntake.keys.toList()..sort();
+      
+      for (final ingredientName in sortedIngredients) {
+        final data = totalIntake[ingredientName]!;
+        buffer.writeln('  - $ingredientName: ${_formatAmount(data.amount)} ${data.unit}');
+      }
+    }
+
+    // Write to file
     final directory = await _getExportDir();
     final fromStr = formatDateForFilename(from);
     final toStr = formatDateForFilename(to);

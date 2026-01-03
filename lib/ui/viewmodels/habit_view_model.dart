@@ -34,6 +34,9 @@ class HabitViewModel extends ChangeNotifier {
 
   // Goal filtering
   String? _selectedGoalId;
+  
+  // Track the last loaded date to prevent unnecessary reloads
+  DateTime? _lastLoadedDate;
 
   // === Getters ===
   List<LifeGoalModel> get goals => _goals;
@@ -86,21 +89,49 @@ class HabitViewModel extends ChangeNotifier {
   }
 
   void _onDateChanged() {
+    // Clear state immediately to prevent data bleeding between dates
+    _todayCompletions.clear();
+    _selectedDateRating = null;
+    notifyListeners();
+    
+    // Load new date's data
     loadDataForSelectedDate();
   }
 
   // === Date Selection ===
   void setSelectedDate(DateTime date) {
+    // Clear state immediately to prevent data bleeding between dates
+    _todayCompletions.clear();
+    _selectedDateRating = null;
+    notifyListeners();
+    
     _dateProvider?.setSelectedDate(date);
     loadDataForSelectedDate();
   }
 
   Future<void> loadDataForSelectedDate() async {
+    // Get normalized date to ensure consistency
     final date = selectedDate;
+    
+    // Skip if already loading for this date
+    if (_lastLoadedDate != null && _lastLoadedDate == date) {
+      return;
+    }
+    
+    // Clear state immediately before loading to prevent race conditions
+    _todayCompletions.clear();
+    _selectedDateRating = null;
+    _lastLoadedDate = null; // Clear to force reload
+    notifyListeners(); // Notify immediately to clear UI
+    
+    // Load data for the new date
     await Future.wait([
       _loadCompletionsForDate(date),
       _loadRatingForDate(date),
     ]);
+    
+    // Update last loaded date only after successful load
+    _lastLoadedDate = date;
     notifyListeners();
   }
 

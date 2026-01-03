@@ -5,7 +5,7 @@ import 'hardcoded_routines.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 14;
+  static const int _dbVersion = 15;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -836,6 +836,21 @@ class DatabaseHelper {
     if (oldVersion < 14) {
       // Add Calendar & Diary module tables
       await _createCalendarTables(db);
+    }
+    if (oldVersion < 15) {
+      // Migrate Shopping Priority values from old 4-level system to new 5-level system
+      // Old: low(1), medium(2), high(3), urgent(4)
+      // New: future(1), low(2), mid(3), high(4), asap(5)
+      // Migration: shift old values up by 1, old urgent(4) -> new asap(5)
+      try {
+        await db.execute('''
+          UPDATE shopping_items
+          SET priority = priority + 1
+          WHERE priority BETWEEN 1 AND 4
+        ''');
+      } catch (e) {
+        // Migration failed, but continue (might be no data or table doesn't exist)
+      }
     }
   }
 

@@ -297,7 +297,7 @@ class _ShoppingItemTile extends StatelessWidget {
     Color color;
     IconData icon;
     switch (priority) {
-      case ShoppingPriority.urgent:
+      case ShoppingPriority.asap:
         color = Colors.red;
         icon = Icons.priority_high;
         break;
@@ -305,13 +305,17 @@ class _ShoppingItemTile extends StatelessWidget {
         color = Colors.orange;
         icon = Icons.arrow_upward;
         break;
-      case ShoppingPriority.medium:
+      case ShoppingPriority.mid:
         color = Colors.blue;
         icon = Icons.remove;
         break;
       case ShoppingPriority.low:
         color = Colors.grey;
         icon = Icons.arrow_downward;
+        break;
+      case ShoppingPriority.future:
+        color = Colors.grey.shade600;
+        icon = Icons.schedule;
         break;
     }
 

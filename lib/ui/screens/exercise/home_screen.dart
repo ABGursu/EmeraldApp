@@ -217,88 +217,91 @@ class _DateHeader extends StatelessWidget {
 
   void _showEditStatsDialog(BuildContext context, DailyLogViewModel vm) {
     final stats = vm.userStats ?? UserStats.empty();
-    final weightController =
-        TextEditingController(text: stats.weight?.toString() ?? '');
-    final fatController =
-        TextEditingController(text: stats.fat?.toString() ?? '');
-    final measurementsController =
-        TextEditingController(text: stats.measurements ?? '');
-    final styleController = TextEditingController(text: stats.style ?? '');
-
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit User Stats'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: weightController,
-                decoration: const InputDecoration(
-                  labelText: 'Weight (kg)',
-                  border: OutlineInputBorder(),
+      builder: (context) {
+        final weightController =
+            TextEditingController(text: stats.weight?.toString() ?? '');
+        final fatController =
+            TextEditingController(text: stats.fat?.toString() ?? '');
+        final measurementsController =
+            TextEditingController(text: stats.measurements ?? '');
+        final styleController = TextEditingController(text: stats.style ?? '');
+        
+        return AlertDialog(
+          title: const Text('Edit User Stats'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: weightController,
+                  decoration: const InputDecoration(
+                    labelText: 'Weight (kg)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: fatController,
-                decoration: const InputDecoration(
-                  labelText: 'Body Fat (%)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: fatController,
+                  decoration: const InputDecoration(
+                    labelText: 'Body Fat (%)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: measurementsController,
-                decoration: const InputDecoration(
-                  labelText: 'Measurements',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: measurementsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Measurements',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
                 ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: styleController,
-                decoration: const InputDecoration(
-                  labelText: 'Style',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: styleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Style',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await vm.updateUserStats(
-                weight: weightController.text.isNotEmpty
-                    ? double.tryParse(weightController.text)
-                    : null,
-                fat: fatController.text.isNotEmpty
-                    ? double.tryParse(fatController.text)
-                    : null,
-                measurements: measurementsController.text.isNotEmpty
-                    ? measurementsController.text
-                    : null,
-                style: styleController.text.isNotEmpty
-                    ? styleController.text
-                    : null,
-              );
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await vm.updateUserStats(
+                  weight: weightController.text.isNotEmpty
+                      ? double.tryParse(weightController.text)
+                      : null,
+                  fat: fatController.text.isNotEmpty
+                      ? double.tryParse(fatController.text)
+                      : null,
+                  measurements: measurementsController.text.isNotEmpty
+                      ? measurementsController.text
+                      : null,
+                  style: styleController.text.isNotEmpty
+                      ? styleController.text
+                      : null,
+                );
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -436,7 +439,7 @@ class _WorkoutLogCard extends StatelessWidget {
   }
 }
 
-class _ExerciseSelectorDialog extends StatelessWidget {
+class _ExerciseSelectorDialog extends StatefulWidget {
   const _ExerciseSelectorDialog({
     required this.definitions,
     required this.onSelect,
@@ -446,26 +449,94 @@ class _ExerciseSelectorDialog extends StatelessWidget {
   final Function(ExerciseDefinition) onSelect;
 
   @override
+  State<_ExerciseSelectorDialog> createState() => _ExerciseSelectorDialogState();
+}
+
+class _ExerciseSelectorDialogState extends State<_ExerciseSelectorDialog> {
+  final TextEditingController _searchController = TextEditingController();
+  List<ExerciseDefinition> _filteredDefinitions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredDefinitions = widget.definitions;
+    _searchController.addListener(_filterDefinitions);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_filterDefinitions);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterDefinitions() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredDefinitions = widget.definitions;
+      } else {
+        _filteredDefinitions = widget.definitions
+            .where((def) =>
+                def.name.toLowerCase().contains(query) ||
+                (def.defaultType != null &&
+                    def.defaultType!.toLowerCase().contains(query)))
+            .toList();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Select Exercise'),
       content: SizedBox(
         width: double.maxFinite,
-        child: definitions.isEmpty
-            ? const Center(child: Text('No exercises available. Add some in the Library tab.'))
-            : ListView.builder(
-                shrinkWrap: true,
-                itemCount: definitions.length,
-                itemBuilder: (context, index) {
-                  final def = definitions[index];
-                  return ListTile(
-                    title: Text(def.name),
-                    subtitle: def.defaultType != null
-                        ? Text('Type: ${def.defaultType}')
-                        : null,
-                    onTap: () => onSelect(def),
-                  );
-                },
+        child: widget.definitions.isEmpty
+            ? const Center(
+                child: Text('No exercises available. Add some in the Library tab.'))
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      hintText: 'Search exercises...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: _filteredDefinitions.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No exercises found matching "${_searchController.text}"',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _filteredDefinitions.length,
+                            itemBuilder: (context, index) {
+                              final def = _filteredDefinitions[index];
+                              return ListTile(
+                                title: Text(def.name),
+                                subtitle: def.defaultType != null
+                                    ? Text('Type: ${def.defaultType}')
+                                    : null,
+                                onTap: () => widget.onSelect(def),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
       ),
       actions: [

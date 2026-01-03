@@ -39,24 +39,89 @@ class CalendarViewModel extends ChangeNotifier {
 
   /// Get events for a specific date (considering recurrence)
   List<CalendarEventModel> getEventsForDate(DateTime date) {
+    // Normalize input date to midnight for comparison
     final dateOnly = DateTime(date.year, date.month, date.day);
-    final nextDay = dateOnly.add(const Duration(days: 1));
     
     return _events.where((event) {
-      final nextOccurrence = event.getNextOccurrence(dateOnly);
-      return (nextOccurrence.isAfter(dateOnly) || nextOccurrence.isAtSameMomentAs(dateOnly)) &&
-          nextOccurrence.isBefore(nextDay);
+      // For non-recurring events, check if the event date matches
+      if (event.recurrenceType == RecurrenceType.none) {
+        final eventDateOnly = DateTime(
+          event.dateTime.year,
+          event.dateTime.month,
+          event.dateTime.day,
+        );
+        return eventDateOnly.isAtSameMomentAs(dateOnly);
+      }
+      
+      // For recurring events, check if the event occurs on this date
+      final eventDateOnly = DateTime(
+        event.dateTime.year,
+        event.dateTime.month,
+        event.dateTime.day,
+      );
+      
+      // Check if the requested date matches the recurrence pattern
+      switch (event.recurrenceType) {
+        case RecurrenceType.weekly:
+          // Check if the date is on the same weekday and is >= event date
+          if (dateOnly.weekday == eventDateOnly.weekday &&
+              (dateOnly.isAfter(eventDateOnly) || dateOnly.isAtSameMomentAs(eventDateOnly))) {
+            // Check if it's a multiple of 7 days from the event date
+            final daysDiff = dateOnly.difference(eventDateOnly).inDays;
+            return daysDiff >= 0 && daysDiff % 7 == 0;
+          }
+          return false;
+        case RecurrenceType.monthly:
+          // Check if the date is on the same day of month and is >= event date
+          if (dateOnly.day == eventDateOnly.day &&
+              (dateOnly.isAfter(eventDateOnly) || dateOnly.isAtSameMomentAs(eventDateOnly))) {
+            // Check if it's in a later month
+            final monthsDiff = (dateOnly.year - eventDateOnly.year) * 12 +
+                (dateOnly.month - eventDateOnly.month);
+            return monthsDiff >= 0;
+          }
+          return false;
+        case RecurrenceType.yearly:
+          // Check if the date is on the same month and day and is >= event date
+          if (dateOnly.month == eventDateOnly.month &&
+              dateOnly.day == eventDateOnly.day &&
+              (dateOnly.isAfter(eventDateOnly) || dateOnly.isAtSameMomentAs(eventDateOnly))) {
+            // Check if it's in a later year
+            final yearsDiff = dateOnly.year - eventDateOnly.year;
+            return yearsDiff >= 0;
+          }
+          return false;
+        case RecurrenceType.none:
+          // Already handled above
+          return false;
+      }
     }).toList();
   }
 
   /// Get events that have a warning window active for a specific date
   List<CalendarEventModel> getWarningEventsForDate(DateTime date) {
+    // Normalize input date to midnight for comparison
     final dateOnly = DateTime(date.year, date.month, date.day);
     return _events.where((event) {
+      // Get the next occurrence from the start of the day
       final nextOccurrence = event.getNextOccurrence(dateOnly);
-      final warningStart = nextOccurrence.subtract(Duration(days: event.warnDaysBefore));
-      return (dateOnly.isAfter(warningStart) || dateOnly.isAtSameMomentAs(warningStart)) &&
-          dateOnly.isBefore(nextOccurrence);
+      final nextOccurrenceDateOnly = DateTime(
+        nextOccurrence.year,
+        nextOccurrence.month,
+        nextOccurrence.day,
+      );
+      
+      // Calculate warning start date (normalized to midnight)
+      final warningStart = nextOccurrenceDateOnly.subtract(Duration(days: event.warnDaysBefore));
+      final warningStartDateOnly = DateTime(
+        warningStart.year,
+        warningStart.month,
+        warningStart.day,
+      );
+      
+      // Check if the current date is within the warning window
+      return (dateOnly.isAfter(warningStartDateOnly) || dateOnly.isAtSameMomentAs(warningStartDateOnly)) &&
+          dateOnly.isBefore(nextOccurrenceDateOnly);
     }).toList();
   }
 

@@ -1,9 +1,10 @@
 /// Priority levels for shopping items
 enum ShoppingPriority {
-  low(1, 'Low'),
-  medium(2, 'Medium'),
-  high(3, 'High'),
-  urgent(4, 'Urgent');
+  future(1, 'Future'),
+  low(2, 'Low'),
+  mid(3, 'Mid'),
+  high(4, 'High'),
+  asap(5, 'ASAP!');
 
   final int value;
   final String label;
@@ -13,7 +14,7 @@ enum ShoppingPriority {
   static ShoppingPriority fromValue(int value) {
     return ShoppingPriority.values.firstWhere(
       (p) => p.value == value,
-      orElse: () => ShoppingPriority.medium,
+      orElse: () => ShoppingPriority.mid,
     );
   }
 }

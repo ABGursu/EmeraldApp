@@ -161,56 +161,58 @@ class ProductManagerScreen extends StatelessWidget {
   }
 
   void _addIngredient(BuildContext context, SupplementViewModel vm) {
-    final nameController = TextEditingController();
-    final unitController = TextEditingController(text: 'mg');
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Ingredient'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'e.g., Vitamin C',
+      builder: (context) {
+        final nameController = TextEditingController();
+        final unitController = TextEditingController(text: 'mg');
+        
+        return AlertDialog(
+          title: const Text('Add Ingredient'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'e.g., Vitamin C',
+                ),
+                textCapitalization: TextCapitalization.words,
+                autofocus: true,
               ),
-              textCapitalization: TextCapitalization.words,
-              autofocus: true,
+              const SizedBox(height: 16),
+              TextField(
+                controller: unitController,
+                decoration: const InputDecoration(
+                  labelText: 'Default Unit',
+                  hintText: 'e.g., mg, mcg, g',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: unitController,
-              decoration: const InputDecoration(
-                labelText: 'Default Unit',
-                hintText: 'e.g., mg, mcg, g',
-              ),
+            FilledButton(
+              onPressed: () {
+                if (nameController.text.trim().isNotEmpty) {
+                  vm.addIngredient(
+                    nameController.text.trim(),
+                    unitController.text.trim().isEmpty
+                        ? 'mg'
+                        : unitController.text.trim(),
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameController.text.trim().isNotEmpty) {
-                vm.addIngredient(
-                  nameController.text.trim(),
-                  unitController.text.trim().isEmpty
-                      ? 'mg'
-                      : unitController.text.trim(),
-                );
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

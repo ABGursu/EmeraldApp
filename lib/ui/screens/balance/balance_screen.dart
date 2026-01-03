@@ -285,49 +285,50 @@ class _BudgetOverviewCard extends StatelessWidget {
     BalanceViewModel vm,
     double? currentBudget,
   ) {
-    final controller = TextEditingController(
-      text: currentBudget?.toStringAsFixed(2) ?? '',
-    );
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Set Monthly Budget'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Budget Amount (TL)',
-            border: OutlineInputBorder(),
-            prefixText: '₺ ',
+      builder: (context) {
+        final controller = TextEditingController(
+          text: currentBudget?.toStringAsFixed(2) ?? '',
+        );
+        return AlertDialog(
+          title: const Text('Set Monthly Budget'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Budget Amount (TL)',
+              border: OutlineInputBorder(),
+              prefixText: '₺ ',
+            ),
+            keyboardType: TextInputType.number,
+            autofocus: true,
           ),
-          keyboardType: TextInputType.number,
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final value = double.tryParse(controller.text);
-              if (value != null && value > 0) {
-                await vm.setBudget(value);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final value = double.tryParse(controller.text);
+                if (value != null && value > 0) {
+                  await vm.setBudget(value);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid positive amount'),
+                    ),
+                  );
                 }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid positive amount'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -335,74 +336,75 @@ class _BudgetOverviewCard extends StatelessWidget {
     BuildContext context,
     BalanceViewModel vm,
   ) {
-    final controller = TextEditingController(
-      text: vm.budgetStartDay.toString(),
-    );
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Budget Start Day'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Set the day of the month when your budget period starts (1-31).',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                labelText: 'Start Day',
-                border: OutlineInputBorder(),
-                helperText: 'Range: 1-31',
+      builder: (context) {
+        final controller = TextEditingController(
+          text: vm.budgetStartDay.toString(),
+        );
+        return AlertDialog(
+          title: const Text('Budget Start Day'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Set the day of the month when your budget period starts (1-31).',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-              keyboardType: TextInputType.number,
-              autofocus: true,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Current Period: ${vm.getCurrentFiscalPeriodText()}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Start Day',
+                  border: OutlineInputBorder(),
+                  helperText: 'Range: 1-31',
+                ),
+                keyboardType: TextInputType.number,
+                autofocus: true,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Current Period: ${vm.getCurrentFiscalPeriodText()}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              final value = int.tryParse(controller.text);
-              if (value != null && value >= 1 && value <= 31) {
-                await vm.setBudgetStartDay(value);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Budget start day set to $value. New period: ${vm.getCurrentFiscalPeriodText()}',
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final value = int.tryParse(controller.text);
+                if (value != null && value >= 1 && value <= 31) {
+                  await vm.setBudgetStartDay(value);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Budget start day set to $value. New period: ${vm.getCurrentFiscalPeriodText()}',
+                        ),
                       ),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid day (1-31)'),
                     ),
                   );
                 }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid day (1-31)'),
-                  ),
-                );
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

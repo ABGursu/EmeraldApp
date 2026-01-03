@@ -165,15 +165,18 @@ class DailyLogViewModel extends ChangeNotifier with DateRangePersistence {
     final item = _logs.removeAt(oldIndex);
     _logs.insert(newIndex, item);
 
-    // Update order indices
+    // Update order indices for all logs (batch update)
+    final updatedLogs = <WorkoutLog>[];
     for (int i = 0; i < _logs.length; i++) {
-      final log = _logs[i];
-      if (log.orderIndex != i) {
-        await _repository.updateWorkoutLog(log.copyWith(orderIndex: i));
-      }
+      updatedLogs.add(_logs[i].copyWith(orderIndex: i));
     }
-
-    await loadLogsForDate(selectedDate);
+    
+    // Use batch update method from repository
+    await _repository.reorderWorkoutLogs(updatedLogs);
+    
+    // Update local state
+    _logs = updatedLogs;
+    notifyListeners();
   }
 
   // Load Routine

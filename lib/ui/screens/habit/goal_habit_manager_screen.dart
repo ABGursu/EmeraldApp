@@ -68,69 +68,71 @@ class _GoalHabitManagerScreenState extends State<GoalHabitManagerScreen>
   }
 
   void _showGoalDialog(BuildContext context, LifeGoalModel? existing) {
-    final titleController = TextEditingController(text: existing?.title ?? '');
-    final descController =
-        TextEditingController(text: existing?.description ?? '');
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(existing == null ? 'New Goal' : 'Edit Goal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                hintText: 'e.g., Learn Japanese',
+      builder: (context) {
+        final titleController = TextEditingController(text: existing?.title ?? '');
+        final descController =
+            TextEditingController(text: existing?.description ?? '');
+        
+        return AlertDialog(
+          title: Text(existing == null ? 'New Goal' : 'Edit Goal'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'e.g., Learn Japanese',
+                ),
+                textCapitalization: TextCapitalization.sentences,
+                autofocus: true,
               ),
-              textCapitalization: TextCapitalization.sentences,
-              autofocus: true,
+              const SizedBox(height: 16),
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Why is this goal important?',
+                ),
+                maxLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'Why is this goal important?',
-              ),
-              maxLines: 2,
-              textCapitalization: TextCapitalization.sentences,
+            FilledButton(
+              onPressed: () {
+                if (titleController.text.trim().isEmpty) return;
+
+                final vm = context.read<HabitViewModel>();
+                if (existing == null) {
+                  vm.addGoal(
+                    titleController.text.trim(),
+                    description: descController.text.trim().isEmpty
+                        ? null
+                        : descController.text.trim(),
+                  );
+                } else {
+                  vm.updateGoal(existing.copyWith(
+                    title: titleController.text.trim(),
+                    description: descController.text.trim().isEmpty
+                        ? null
+                        : descController.text.trim(),
+                  ));
+                }
+                Navigator.pop(context);
+              },
+              child: Text(existing == null ? 'Create' : 'Save'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (titleController.text.trim().isEmpty) return;
-
-              final vm = context.read<HabitViewModel>();
-              if (existing == null) {
-                vm.addGoal(
-                  titleController.text.trim(),
-                  description: descController.text.trim().isEmpty
-                      ? null
-                      : descController.text.trim(),
-                );
-              } else {
-                vm.updateGoal(existing.copyWith(
-                  title: titleController.text.trim(),
-                  description: descController.text.trim().isEmpty
-                      ? null
-                      : descController.text.trim(),
-                ));
-              }
-              Navigator.pop(context);
-            },
-            child: Text(existing == null ? 'Create' : 'Save'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -248,55 +250,57 @@ class _GoalsTab extends StatelessWidget {
   }
 
   void _showGoalDialog(BuildContext context, LifeGoalModel goal) {
-    final titleController = TextEditingController(text: goal.title);
-    final descController = TextEditingController(text: goal.description ?? '');
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Goal'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
+      builder: (context) {
+        final titleController = TextEditingController(text: goal.title);
+        final descController = TextEditingController(text: goal.description ?? '');
+        
+        return AlertDialog(
+          title: const Text('Edit Goal'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                ),
+                textCapitalization: TextCapitalization.sentences,
               ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
+              const SizedBox(height: 16),
+              TextField(
+                controller: descController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                ),
+                maxLines: 2,
+                textCapitalization: TextCapitalization.sentences,
               ),
-              maxLines: 2,
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            ],
           ),
-          FilledButton(
-            onPressed: () {
-              if (titleController.text.trim().isEmpty) return;
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (titleController.text.trim().isEmpty) return;
 
-              context.read<HabitViewModel>().updateGoal(goal.copyWith(
-                    title: titleController.text.trim(),
-                    description: descController.text.trim().isEmpty
-                        ? null
-                        : descController.text.trim(),
-                  ));
-              Navigator.pop(context);
-            },
+                context.read<HabitViewModel>().updateGoal(goal.copyWith(
+                      title: titleController.text.trim(),
+                      description: descController.text.trim().isEmpty
+                          ? null
+                          : descController.text.trim(),
+                    ));
+                Navigator.pop(context);
+              },
             child: const Text('Save'),
           ),
         ],
-      ),
+        );
+      },
     );
   }
 
@@ -554,6 +558,7 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
   HabitType _selectedType = HabitType.positive;
 
   final List<int> _colorOptions = [
+    // Primary Vibrant Colors
     0xFF2196F3, // Blue
     0xFF4CAF50, // Green
     0xFFF44336, // Red
@@ -561,9 +566,31 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
     0xFF9C27B0, // Purple
     0xFF00BCD4, // Cyan
     0xFFE91E63, // Pink
-    0xFF795548, // Brown
-    0xFF607D8B, // Blue Grey
     0xFF009688, // Teal
+    
+    // Additional Vibrant Colors
+    0xFF3F51B5, // Indigo
+    0xFF00ACC1, // Light Blue
+    0xFF8BC34A, // Light Green
+    0xFFFFC107, // Amber
+    0xFFFF5722, // Deep Orange
+    0xFF7B1FA2, // Deep Purple
+    0xFFC2185B, // Pink (Darker)
+    0xFF00796B, // Teal (Darker)
+    0xFF1976D2, // Blue (Darker)
+    0xFF388E3C, // Green (Darker)
+    0xFFD32F2F, // Red (Darker)
+    0xFFF57C00, // Orange (Darker)
+    0xFF512DA8, // Deep Purple (Darker)
+    0xFF0288D1, // Light Blue (Darker)
+    0xFF689F38, // Light Green (Darker)
+    0xFFFBC02D, // Yellow
+    0xFFE64A19, // Deep Orange (Darker)
+    0xFF303F9F, // Indigo (Darker)
+    0xFF5D4037, // Brown
+    0xFF455A64, // Blue Grey
+    0xFF616161, // Grey
+    0xFF000000, // Black
   ];
 
   @override
@@ -655,39 +682,44 @@ class _HabitEditDialogState extends State<_HabitEditDialog> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _colorOptions.map((color) {
-                final isSelected = _selectedColor == color;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedColor = color),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Color(color),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        width: 3,
+            SizedBox(
+              height: 120,
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _colorOptions.map((color) {
+                    final isSelected = _selectedColor == color;
+                    return GestureDetector(
+                      onTap: () => setState(() => _selectedColor = color),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Color(color),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.transparent,
+                            width: 3,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: Color(color).withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: isSelected
+                            ? const Icon(Icons.check, color: Colors.white, size: 20)
+                            : null,
                       ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: Color(color).withValues(alpha: 0.5),
-                                blurRadius: 8,
-                                spreadRadius: 2,
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 20)
-                        : null,
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ],
         ),

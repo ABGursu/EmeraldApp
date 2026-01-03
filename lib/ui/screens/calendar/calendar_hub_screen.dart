@@ -16,6 +16,22 @@ class CalendarHubScreen extends StatefulWidget {
 
 class _CalendarHubScreenState extends State<CalendarHubScreen> {
   int _currentIndex = 0;
+  bool _hasInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure events are loaded when screen is first displayed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_hasInitialized) {
+        final vm = context.read<CalendarViewModel>();
+        if (vm.events.isEmpty && !vm.isLoading) {
+          vm.init();
+        }
+        _hasInitialized = true;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
