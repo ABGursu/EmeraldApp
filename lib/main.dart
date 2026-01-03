@@ -122,184 +122,151 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final modules = [
+      _ModuleInfo(
+        title: 'Balance Sheet',
+        icon: Icons.account_balance_wallet,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BalanceScreen()),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Exercise Logger',
+        icon: Icons.fitness_center,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ExerciseLogScreen(),
+            ),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Supplement Logger',
+        icon: Icons.medication_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SupplementHubScreen(),
+            ),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Habit Logger',
+        icon: Icons.track_changes,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const HabitHubScreen(),
+            ),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Shopping List',
+        icon: Icons.shopping_cart_outlined,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const ShoppingListScreen(),
+            ),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Calendar & Diary',
+        icon: Icons.calendar_today,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const CalendarHubScreen(),
+            ),
+          );
+        },
+      ),
+      _ModuleInfo(
+        title: 'Backup & Restore',
+        icon: Icons.backup,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const BackupSettingsScreen(),
+            ),
+          );
+        },
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('EmeraldApp'),
         centerTitle: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          _buildModuleCard(
-            context,
-            title: 'Balance Sheet',
-            subtitle: 'Financial tracking with pie charts',
-            icon: Icons.account_balance_wallet,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BalanceScreen()),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Exercise Logger',
-            subtitle: 'Advanced workout tracking',
-            icon: Icons.fitness_center,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ExerciseLogScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Supplement Logger',
-            subtitle: 'Track vitamins & prehab',
-            icon: Icons.medication_outlined,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SupplementHubScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Habit Logger',
-            subtitle: 'Goals & daily satisfaction',
-            icon: Icons.track_changes,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const HabitHubScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Shopping List',
-            subtitle: 'Plan and track your purchases',
-            icon: Icons.shopping_cart_outlined,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ShoppingListScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Calendar & Diary',
-            subtitle: 'Events, reminders & daily journal',
-            icon: Icons.calendar_today,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CalendarHubScreen(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildModuleCard(
-            context,
-            title: 'Backup & Restore',
-            subtitle: 'Export and restore all data',
-            icon: Icons.backup,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const BackupSettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.0, // Kare butonlar için 1.0
+        ),
+        itemCount: modules.length,
+        itemBuilder: (context, index) {
+          return _buildModuleButton(context, modules[index]);
+        },
       ),
     );
   }
 
-  Widget _buildModuleCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildModuleButton(
+    BuildContext context,
+    _ModuleInfo module,
+  ) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 8,
-      shadowColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 4,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        onTap: module.onTap,
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
               colors: [
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-              width: 1.5,
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              width: 1,
             ),
           ),
-          child: Row(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.15),
-                child: Icon(
-                  icon,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
               Icon(
-                Icons.arrow_forward_ios,
-                color: Theme.of(context).colorScheme.secondary,
+                module.icon,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  module.title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -307,4 +274,16 @@ class MainMenuScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ModuleInfo {
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  _ModuleInfo({
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
 }

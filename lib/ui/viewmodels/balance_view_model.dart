@@ -30,6 +30,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   // Tag filtering
   String? _selectedTagId;
+  String _tagSearchQuery = '';
 
   // Fiscal month settings
   int _budgetStartDay = 1; // Default to calendar month (1st)
@@ -42,15 +43,31 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   bool get isRollingDate => _isRollingDate;
   int get budgetStartDay => _budgetStartDay;
   String? get selectedTagId => _selectedTagId;
+  String get tagSearchQuery => _tagSearchQuery;
 
   List<TransactionModel> get transactions => _transactions;
   List<TagModel> get tags => _tags;
+  
+  /// Filtered tags based on search query
+  List<TagModel> get filteredTags {
+    if (_tagSearchQuery.isEmpty) {
+      return _tags;
+    }
+    final query = _tagSearchQuery.toLowerCase();
+    return _tags.where((tag) => tag.name.toLowerCase().contains(query)).toList();
+  }
   bool get isLoading => _loading;
   double? get currentBudget => _currentBudget;
 
   /// Sets the selected tag filter
   void setSelectedTag(String? tagId) {
     _selectedTagId = tagId;
+    notifyListeners();
+  }
+
+  /// Sets the tag search query
+  void setTagSearchQuery(String query) {
+    _tagSearchQuery = query;
     notifyListeners();
   }
 

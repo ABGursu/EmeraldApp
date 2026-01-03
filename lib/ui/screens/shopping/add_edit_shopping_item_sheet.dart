@@ -193,8 +193,30 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   label: 'Tag (optional)',
                   items: tagItems,
                   initialValue: _selectedTag,
-                  onEditItem: (item, name, color) async => item, // Not used
-                  onDeleteItem: (item) async {}, // Not used
+                  onEditItem: (item, name, color) async {
+                    final balanceVm = context.read<BalanceViewModel>();
+                    final tag = balanceVm.tags.firstWhere((t) => t.id == item.id);
+                    final updated = tag.copyWith(name: name, colorValue: color);
+                    await balanceVm.updateTag(updated);
+                    await vm.loadTags(); // Reload tags in shopping view model
+                    final updatedItem = ColorCodedItem(
+                      id: updated.id,
+                      name: updated.name,
+                      colorValue: updated.colorValue,
+                    );
+                    if (_selectedTag?.id == item.id) {
+                      _selectedTag = updatedItem;
+                    }
+                    return updatedItem;
+                  },
+                  onDeleteItem: (item) async {
+                    final balanceVm = context.read<BalanceViewModel>();
+                    await balanceVm.deleteTag(item.id);
+                    await vm.loadTags(); // Reload tags in shopping view model
+                    if (_selectedTag?.id == item.id) {
+                      _selectedTag = null;
+                    }
+                  },
                   onChanged: (item) => _selectedTag = item,
                   validator: (item) => null,
                   onCreateNew: (name, color) async {

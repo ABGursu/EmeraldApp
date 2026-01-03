@@ -107,6 +107,12 @@ class ExerciseLibraryViewModel extends ChangeNotifier {
   }
 
   Future<void> updateExerciseDefinition(ExerciseDefinition definition) async {
+    // If name changed, we need to handle it carefully
+    // Check if new name already exists (and it's not the same exercise)
+    final existing = await _repository.getExerciseDefinitionByName(definition.name);
+    if (existing != null && existing.id != definition.id) {
+      throw Exception('An exercise with this name already exists');
+    }
     await _repository.updateExerciseDefinition(definition);
     await loadExerciseDefinitions();
   }

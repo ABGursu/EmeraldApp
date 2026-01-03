@@ -60,14 +60,40 @@ class BalanceScreen extends StatelessWidget {
                   children: [
                     _CurrentBalanceCard(balance: vm.currentBalance),
                     _BudgetOverviewCard(vm: vm),
-                    // Quick Filter Bar
-                    if (vm.tags.isNotEmpty)
+                    // Tag Search Bar
+                    if (vm.tags.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search tags...',
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: vm.tagSearchQuery.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () => vm.setTagSearchQuery(''),
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onChanged: (value) => vm.setTagSearchQuery(value),
+                        ),
+                      ),
+                      // Quick Filter Bar
                       QuickFilterBar<TagModel>(
-                        items: vm.tags,
+                        items: vm.filteredTags,
                         selectedItem: vm.selectedTagId != null
-                            ? vm.tags.firstWhere(
+                            ? vm.filteredTags.firstWhere(
                                 (t) => t.id == vm.selectedTagId,
-                                orElse: () => vm.tags.first,
+                                orElse: () => vm.filteredTags.isNotEmpty
+                                    ? vm.filteredTags.first
+                                    : vm.tags.firstWhere(
+                                        (t) => t.id == vm.selectedTagId,
+                                        orElse: () => vm.tags.first,
+                                      ),
                               )
                             : null,
                         onItemSelected: (tag) {
@@ -87,6 +113,7 @@ class BalanceScreen extends StatelessWidget {
                         getItemName: (tag) => tag.name,
                         getItemColor: (tag) => tag.colorValue,
                       ),
+                    ],
                     Expanded(
                       child: _TransactionList(
                         grouped: vm.groupedByDate,
@@ -189,7 +216,10 @@ class _BudgetOverviewCard extends StatelessWidget {
           Text(
             'Period: ${vm.getCurrentFiscalPeriodText()}',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
           ),
           const SizedBox(height: 8),
@@ -197,7 +227,10 @@ class _BudgetOverviewCard extends StatelessWidget {
             Text(
               'No budget set for this month',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
             )
           else ...[
@@ -225,8 +258,10 @@ class _BudgetOverviewCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: percentage.clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(percentage)),
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    _getProgressColor(percentage)),
               ),
             ),
             if (percentage > 1.0) ...[
@@ -406,7 +441,10 @@ class _CurrentBalanceCard extends StatelessWidget {
           Text(
             'Current Balance',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 8),
@@ -460,17 +498,19 @@ class _TransactionList extends StatelessWidget {
                     .map((tx) => _TransactionTile(
                           transaction: tx,
                           tagName: tags
-                                  .firstWhere(
-                                    (t) => t.id == tx.tagId,
-                                    orElse: () => const ColorCodedItem(
-                                        id: '', name: 'Untagged', colorValue: 0),
-                                  )
-                                  .name,
+                              .firstWhere(
+                                (t) => t.id == tx.tagId,
+                                orElse: () => const ColorCodedItem(
+                                    id: '', name: 'Untagged', colorValue: 0),
+                              )
+                              .name,
                           colorValue: tags
                               .firstWhere(
                                 (t) => t.id == tx.tagId,
                                 orElse: () => const ColorCodedItem(
-                                    id: '', name: 'Untagged', colorValue: 0xFF9E9E9E),
+                                    id: '',
+                                    name: 'Untagged',
+                                    colorValue: 0xFF9E9E9E),
                               )
                               .colorValue,
                           tags: tags,
@@ -607,4 +647,3 @@ class _TransactionTile extends StatelessWidget {
     );
   }
 }
-

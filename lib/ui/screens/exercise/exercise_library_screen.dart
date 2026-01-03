@@ -49,7 +49,9 @@ class ExerciseLibraryScreen extends StatelessWidget {
                         onItemSelected: (bodyPart) {
                           vm.setSelectedBodyPart(bodyPart);
                         },
-                        onItemLongPress: null, // Body parts are strings/enums, not editable
+                        onItemLongPress: (bodyPart) {
+                          _showEditBodyPartDialog(context, bodyPart, vm);
+                        },
                         getItemId: (bodyPart) => bodyPart,
                         getItemName: (bodyPart) => bodyPart.split('(').first.trim(),
                         getItemColor: null, // Body parts don't have colors
@@ -184,6 +186,78 @@ class ExerciseLibraryScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static Future<void> _showEditBodyPartDialog(
+    BuildContext context,
+    String bodyPart,
+    ExerciseLibraryViewModel vm,
+  ) async {
+    final controller = TextEditingController(text: bodyPart);
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Body Part'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Body Part Name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty && newName != bodyPart) {
+                Navigator.pop(context, {'old': bodyPart, 'new': newName});
+              } else {
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final oldName = result['old']!;
+      final newName = result['new']!;
+      
+      // Update all exercises that use this body part
+      await _updateBodyPartInAllExercises(vm, oldName, newName);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Body part "$oldName" updated to "$newName" in all exercises')),
+        );
+      }
+    }
+    controller.dispose();
+  }
+
+  static Future<void> _updateBodyPartInAllExercises(
+    ExerciseLibraryViewModel vm,
+    String oldBodyPart,
+    String newBodyPart,
+  ) async {
+    for (final def in vm.exerciseDefinitions) {
+      if (def.bodyPart != null && def.bodyPart!.contains(oldBodyPart)) {
+        final parts = def.bodyPart!.split(',').map((s) => s.trim()).toList();
+        final updatedParts = parts.map((p) => p == oldBodyPart ? newBodyPart : p).toList();
+        final updatedBodyPart = updatedParts.join(',');
+        
+        final updated = def.copyWith(bodyPart: updatedBodyPart);
+        await vm.updateExerciseDefinition(updated);
+      }
+    }
   }
 }
 

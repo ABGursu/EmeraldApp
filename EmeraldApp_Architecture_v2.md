@@ -1,6 +1,6 @@
 # EmeraldApp - Technical Architecture Documentation
 
-**Version:** 2.1 (Production-Ready + Shopping List + Calendar & Diary)  
+**Version:** 2.2 (Production-Ready + Shopping List + Calendar & Diary + Enhanced Features)  
 **Last Updated:** December 2025  
 **Project:** Personal Logger (EmeraldApp) - Flutter Android Application
 
@@ -147,6 +147,7 @@ The database uses a **singleton pattern** (`DatabaseHelper.instance`) to ensure 
 
 **Key Points:**
 - **Multiple Body Parts:** The `body_part` column stores multiple values as a comma-separated string (e.g., `"Quadriceps,Glutes"`). This allows exercises to be filtered by any of their target muscle groups.
+- **UI Implementation:** The exercise definition editor uses a multi-select checkbox list for body part selection, allowing users to select multiple body parts for compound exercises.
 - **Filtering Logic:** When filtering by body part, use `LIKE '%BodyPart%'` or split the string and check membership.
 - **Type Safety:** `default_type` should be validated against `ExerciseType` enum (see Section 4).
 
@@ -1432,16 +1433,75 @@ See Section 4.1 in v1 document for detailed Habit Logger architecture. Key enhan
 
 ### 6.2 Exercise Logger Module
 
-See Section 2.2 and 3.3 in v1 document for detailed Exercise Logger architecture. Key enhancements in v2:
+**Architecture Overview:**
+- **Repository:** `IExerciseLogRepository` / `SqlExerciseLogRepository`
+- **ViewModel:** `ExerciseLibraryViewModel`, `DailyLogViewModel`
+- **Exercise Definitions:** Master list of all exercises with body part categorization
 
-- **Multiple Body Parts:** `body_part` column supports comma-separated values
+**Key Features:**
+- **Multiple Body Parts:** `body_part` column supports comma-separated values (e.g., "Quadriceps,Glutes")
+- **Multi-Select UI:** Exercise definition editor uses checkbox list for selecting multiple body parts
+- **Compound Exercise Support:** Users can select multiple body parts for compound exercises (e.g., Squats target both Quadriceps and Glutes)
+- **Body Part Filtering:** QuickFilterBar allows filtering exercises by body part
 - **Type Safety:** `default_type` should use `ExerciseType` enum
 - **Routine Editing:** Uses DELETE-ALL-THEN-INSERT strategy
 - **Reordering:** Uses batch updates for performance
 
+**Exercise Definition Editor Flow:**
+```
+User creates/edits exercise
+    │
+    ├─→ Selects multiple body parts from checkbox list
+    │
+    ├─→ Selected body parts displayed as chips
+    │
+    └─→ Saved as comma-separated string (e.g., "Quadriceps,Glutes")
+            │
+            └─→ Stored in exercise_definitions.body_part column
+```
+
+**Files:**
+- `lib/ui/screens/exercise/add_edit_exercise_definition_sheet.dart` - Multi-select body part UI
+- `lib/ui/viewmodels/exercise_library_view_model.dart` - Exercise definition management
+- `lib/data/models/exercise_definition_model.dart` - Exercise definition model
+
 ### 6.3 Balance Sheet Module
 
-See Section 4.2 in v1 document for detailed Balance Sheet architecture.
+**Architecture Overview:**
+- **Repository:** `IBalanceRepository` / `SqlBalanceRepository`
+- **ViewModel:** `BalanceViewModel`
+- **Tag System:** Independent tag system for transaction categorization
+
+**Key Features:**
+- **Tag Search:** Users can search tags by name using a search bar above the QuickFilterBar
+- **Tag Editing:** Long-press on a tag in QuickFilterBar opens EditTagSheet for renaming and color changes
+- **Tag Filtering:** QuickFilterBar allows filtering transactions by selected tag
+- **Fiscal Month Support:** Custom budget start day (e.g., 15th of each month)
+- **Pie Chart Visualization:** Expense breakdown by tags with custom date ranges
+
+**Tag Management Flow:**
+```
+User searches for tag
+    │
+    ├─→ BalanceViewModel.setTagSearchQuery(query)
+    │
+    ├─→ filteredTags getter filters tags by name
+    │
+    └─→ QuickFilterBar displays filtered results
+    
+User long-presses tag
+    │
+    └─→ Opens EditTagSheet
+            │
+            ├─→ Edit tag name
+            ├─→ Edit tag color
+            └─→ Update via BalanceViewModel.updateTag()
+```
+
+**Files:**
+- `lib/ui/viewmodels/balance_view_model.dart` - `tagSearchQuery`, `filteredTags` getter
+- `lib/ui/screens/balance/balance_screen.dart` - Tag search bar and QuickFilterBar integration
+- `lib/ui/screens/balance/edit_tag_sheet.dart` - Tag editing interface
 
 ### 6.4 Supplement Logger Module
 
@@ -1617,7 +1677,12 @@ For specific implementation details, refer to the code files mentioned in each s
 ---
 
 **Document Maintained By:** Development Team  
-**Version:** 2.1 (Production-Ready + Shopping List + Calendar & Diary)  
+**Version:** 2.2 (Production-Ready + Shopping List + Calendar & Diary + Enhanced Features)  
 **Last Updated:** December 2025  
 **Questions or Updates:** Update this document when architecture changes occur.
+
+**Recent Updates (v2.2):**
+- ✅ Exercise definitions now support multi-select body parts via checkbox UI
+- ✅ Tag search functionality added to Balance Sheet module
+- ✅ Tag editing via long-press on QuickFilterBar items
 
