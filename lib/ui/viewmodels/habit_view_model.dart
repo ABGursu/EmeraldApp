@@ -32,11 +32,29 @@ class HabitViewModel extends ChangeNotifier {
   DailyRatingModel? _selectedDateRating;
   bool _loading = false;
 
+  // Goal filtering
+  String? _selectedGoalId;
+
   // === Getters ===
   List<LifeGoalModel> get goals => _goals;
   List<HabitModel> get habits => _habits;
   Map<String, bool> get completions => _todayCompletions;
   DailyRatingModel? get selectedDateRating => _selectedDateRating;
+  String? get selectedGoalId => _selectedGoalId;
+
+  /// Gets filtered habits based on selected goal
+  List<HabitModel> get filteredHabits {
+    if (_selectedGoalId == null) {
+      return _habits;
+    }
+    return _habits.where((h) => h.goalId == _selectedGoalId).toList();
+  }
+
+  /// Sets the selected goal filter
+  void setSelectedGoal(String? goalId) {
+    _selectedGoalId = goalId;
+    notifyListeners();
+  }
   DateTime get selectedDate {
     final date = _dateProvider?.selectedDate ?? DateTime.now();
     return HabitLogModel.normalizeDate(date);

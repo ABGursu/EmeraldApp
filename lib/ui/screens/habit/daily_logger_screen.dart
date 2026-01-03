@@ -262,7 +262,7 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
   }
 
   Widget _buildHabitsSection(BuildContext context, HabitViewModel vm) {
-    if (vm.habits.isEmpty) {
+    if (vm.filteredHabits.isEmpty) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -295,8 +295,15 @@ class _DailyLoggerScreenState extends State<DailyLoggerScreen> {
       );
     }
 
-    // Group habits by goal
-    final grouped = vm.habitsGroupedByGoal;
+    // Group filtered habits by goal
+    final filteredHabits = vm.filteredHabits;
+    final Map<LifeGoalModel?, List<HabitModel>> grouped = {};
+    final goalsMap = {for (final g in vm.goals) g.id: g};
+    
+    for (final habit in filteredHabits) {
+      final goal = habit.goalId != null ? goalsMap[habit.goalId] : null;
+      grouped.putIfAbsent(goal, () => []).add(habit);
+    }
     final sortedKeys = grouped.keys.toList()
       ..sort((a, b) {
         if (a == null && b == null) return 0;

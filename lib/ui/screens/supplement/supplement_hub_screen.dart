@@ -19,6 +19,13 @@ class SupplementHubScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Export to Text',
+            onPressed: () => _showExportDialog(context),
+          ),
+        ],
       ),
       body: Consumer<SupplementViewModel>(
         builder: (context, vm, _) {
@@ -425,6 +432,81 @@ class SupplementHubScreen extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _showExportDialog(BuildContext context) {
+    final vm = context.read<SupplementViewModel>();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Export Supplement Logs'),
+        content: const Text(
+          'Select a date range to export your supplement history to a text file.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              
+              // Show date range picker
+              final range = await showDateRangePicker(
+                context: context,
+                firstDate: DateTime(2000),
+                lastDate: DateTime.now().add(const Duration(days: 365)),
+                initialDateRange: vm.logs.isNotEmpty
+                    ? DateTimeRange(
+                        start: vm.logs.last.date,
+                        end: vm.logs.first.date,
+                      )
+                    : null,
+              );
+              
+              if (range != null && context.mounted) {
+                try {
+                  final path = await vm.exportLogs(
+                    from: range.start,
+                    to: range.end.add(const Duration(
+                      hours: 23,
+                      minutes: 59,
+                      seconds: 59,
+                    )), // inclusive end
+                  );
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Exported to: $path'),
+                        duration: const Duration(seconds: 5),
+                        action: SnackBarAction(
+                          label: 'OK',
+                          onPressed: () {},
+                        ),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Export failed: $e'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Select Range & Export'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

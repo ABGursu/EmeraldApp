@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/exercise_definition_model.dart';
 import '../../../ui/viewmodels/exercise_library_view_model.dart';
+import '../../widgets/quick_filter_bar.dart';
 import 'add_edit_exercise_definition_sheet.dart';
 
 class ExerciseLibraryScreen extends StatelessWidget {
@@ -40,42 +41,18 @@ class ExerciseLibraryScreen extends StatelessWidget {
                         onChanged: (value) => vm.setExerciseSearchQuery(value),
                       ),
                     ),
-                    // Body Part Filter Chips
+                    // Body Part Filter Bar
                     if (vm.uniqueBodyParts.isNotEmpty)
-                      SizedBox(
-                        height: 50,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          children: [
-                            FilterChip(
-                              label: const Text('All'),
-                              selected: vm.selectedBodyPart == null,
-                              onSelected: (selected) {
-                                vm.setSelectedBodyPart(null);
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            ...vm.uniqueBodyParts.map((bodyPart) {
-                              final isSelected = vm.selectedBodyPart == bodyPart;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: FilterChip(
-                                  label: Text(
-                                    bodyPart.split('(').first.trim(),
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    vm.setSelectedBodyPart(
-                                      selected ? bodyPart : null,
-                                    );
-                                  },
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
+                      QuickFilterBar<String>(
+                        items: vm.uniqueBodyParts,
+                        selectedItem: vm.selectedBodyPart,
+                        onItemSelected: (bodyPart) {
+                          vm.setSelectedBodyPart(bodyPart);
+                        },
+                        onItemLongPress: null, // Body parts are strings/enums, not editable
+                        getItemId: (bodyPart) => bodyPart,
+                        getItemName: (bodyPart) => bodyPart.split('(').first.trim(),
+                        getItemColor: null, // Body parts don't have colors
                       ),
                     // Exercise List
                     Expanded(

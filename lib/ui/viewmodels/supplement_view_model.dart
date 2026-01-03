@@ -11,10 +11,11 @@ import '../../data/models/supplement_log_detail_model.dart';
 import '../../data/repositories/i_supplement_repository.dart';
 import '../../data/repositories/sql_supplement_repository.dart';
 import '../../utils/date_formats.dart';
+import '../../utils/date_range_persistence.dart';
 import '../../utils/id_generator.dart';
 
 /// ViewModel for the Supplement & Prehab Logger module.
-class SupplementViewModel extends ChangeNotifier {
+class SupplementViewModel extends ChangeNotifier with DateRangePersistence {
   SupplementViewModel({ISupplementRepository? repository})
       : _repository = repository ?? SqlSupplementRepository();
 
@@ -26,6 +27,18 @@ class SupplementViewModel extends ChangeNotifier {
   List<SupplementLogModel> _logs = [];
   Map<String, ({double amount, String unit})> _todaysTotals = {};
   bool _loading = false;
+
+  // Date range for history/export views
+  DateTime? _historyStartDate;
+  DateTime? _historyEndDate;
+  bool _isRollingDate = false;
+
+  @override
+  String get moduleName => 'supplement';
+
+  DateTime? get historyStartDate => _historyStartDate;
+  DateTime? get historyEndDate => _historyEndDate;
+  bool get isRollingDate => _isRollingDate;
 
   // === Getters ===
   List<IngredientModel> get ingredients => _ingredients;
@@ -39,6 +52,7 @@ class SupplementViewModel extends ChangeNotifier {
     _loading = true;
     notifyListeners();
 
+    await loadDateRangeFromPrefs();
     await Future.wait([
       loadIngredients(),
       loadProducts(),
@@ -47,6 +61,43 @@ class SupplementViewModel extends ChangeNotifier {
     ]);
 
     _loading = false;
+    notifyListeners();
+  }
+
+  /// Loads persisted date range from SharedPreferences
+  Future<void> loadDateRangeFromPrefs() async {
+    final range = await loadDateRange();
+    _historyStartDate = range.startDate;
+    _historyEndDate = range.endDate;
+    _isRollingDate = range.isRollingToday;
+    
+    // Apply date range to logs if set
+    if (_historyStartDate != null && _historyEndDate != null) {
+      await loadLogs(from: _historyStartDate, to: _historyEndDate);
+    }
+    notifyListeners();
+  }
+
+  /// Sets the date range for history/export and persists it
+  Future<void> setHistoryDateRange({
+    required DateTime? startDate,
+    required DateTime? endDate,
+  }) async {
+    _historyStartDate = startDate;
+    _historyEndDate = endDate;
+    await saveDateRange(startDate: startDate, endDate: endDate);
+    
+    // Reload logs with new date range
+    await loadLogs(from: startDate, to: endDate);
+  }
+
+  /// Clears the history date range
+  Future<void> clearHistoryDateRange() async {
+    _historyStartDate = null;
+    _historyEndDate = null;
+    _isRollingDate = false;
+    await clearDateRange();
+    await loadLogs(); // Load all logs
     notifyListeners();
   }
 

@@ -1,7 +1,7 @@
 # EmeraldApp - Technical Architecture Documentation
 
-**Version:** 2.0 (Production-Ready)  
-**Last Updated:** 2025  
+**Version:** 2.1 (Production-Ready + Shopping List + Calendar & Diary)  
+**Last Updated:** December 2025  
 **Project:** Personal Logger (EmeraldApp) - Flutter Android Application
 
 ---
@@ -107,11 +107,13 @@ MultiProvider(
 ```
 MultiProvider (root)
   ├── DateProvider (shared by Exercise & Habit modules)
-  ├── ExerciseLibraryViewModel
-  ├── DailyLogViewModel (depends on DateProvider)
-  ├── HabitViewModel (depends on DateProvider)
-  ├── BalanceViewModel
-  └── SupplementViewModel
+    ├── ExerciseLibraryViewModel
+    ├── DailyLogViewModel (depends on DateProvider)
+    ├── HabitViewModel (depends on DateProvider)
+    ├── BalanceViewModel
+    ├── SupplementViewModel
+    ├── ShoppingViewModel (depends on BalanceViewModel.repository)
+    └── CalendarViewModel
 ```
 
 ---
@@ -121,8 +123,8 @@ MultiProvider (root)
 ### 2.1 Database Overview
 
 **Database:** SQLite (via `sqflite` package)  
-**Database Name:** `personal_logger.db`  
-**Current Version:** 12 (enhanced for v2)  
+**Database Name:** `emerald_app.db`  
+**Current Version:** 14 (enhanced for v2 + Shopping List + Calendar)  
 **Location:** `lib/data/local_db/database_helper.dart`
 
 The database uses a **singleton pattern** (`DatabaseHelper.instance`) to ensure a single connection throughout the app lifecycle.
@@ -388,7 +390,155 @@ ALTER TABLE habits ADD COLUMN target_streak INTEGER;
 **Model:** `BudgetGoalModel`  
 **Repository Methods:** `setBudget()`, `getBudget()`
 
-### 2.5 Supplement Logger Tables
+### 2.5 Shopping List Tables ⭐ NEW
+
+#### Table: `shopping_items`
+
+**Purpose:** Shopping list items with purchase tracking and expense integration
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PRIMARY KEY | Unique identifier (generated) |
+| `name` | TEXT | NOT NULL | Item name |
+| `estimated_price` | REAL | NOT NULL | Budget cap (estimated price) |
+| `actual_price` | REAL | NULL | Actual purchase price (filled when purchased) |
+| `priority` | INTEGER | NOT NULL | Priority enum as int (0=urgent, 1=high, 2=medium, 3=low) |
+| `quantity` | INTEGER | NULL | Optional quantity |
+| `note` | TEXT | NULL | Optional note |
+| `tag_id` | TEXT | NULL, FOREIGN KEY | References `tags.id` (ON DELETE SET NULL) |
+| `is_purchased` | INTEGER | NOT NULL DEFAULT 0 | Purchase status (0/1) |
+| `purchase_date` | INTEGER | NULL | Purchase date (milliseconds) |
+| `linked_transaction_id` | TEXT | NULL, FOREIGN KEY | References `transactions.id` (ON DELETE SET NULL) |
+| `created_at` | INTEGER | NOT NULL | Creation timestamp |
+
+**Model:** `ShoppingItemModel`  
+**Foreign Keys:**
+- `tag_id` → `tags.id` (ON DELETE SET NULL) - Uses Balance Sheet tags
+- `linked_transaction_id` → `transactions.id` (ON DELETE SET NULL)
+
+**Key Points:**
+- **Default Tag:** If no tag selected, defaults to "Shopping" tag (Light Brown: #D2B48C)
+- **Expense Integration:** When marked as purchased, automatically creates a transaction in Balance Sheet
+- **Historical Accuracy:** Purchase date can be backdated, affecting historical balance
+- **Variance Tracking:** Compares `actual_price` vs `estimated_price` for budget adherence
+- **Reversibility:** Can unpurchase items (removes linked transaction)
+
+**Migration:** Added in database version 13:
+```sql
+CREATE TABLE shopping_items(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  estimated_price REAL NOT NULL,
+  actual_price REAL,
+  priority INTEGER NOT NULL,
+  quantity INTEGER,
+  note TEXT,
+  tag_id TEXT,
+  is_purchased INTEGER NOT NULL DEFAULT 0,
+  purchase_date INTEGER,
+  linked_transaction_id TEXT,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE SET NULL,
+  FOREIGN KEY(linked_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+);
+```
+
+### 2.6 Calendar & Diary Tables ⭐ NEW
+
+#### Table: `calendar_tags`
+
+**Purpose:** Independent tag system for calendar events (separate from Balance Sheet tags)
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PRIMARY KEY | Unique identifier (generated) |
+| `name` | TEXT | NOT NULL | Tag name (e.g., "Exams", "Personal", "Work") |
+| `color_value` | INTEGER | NOT NULL | Color for UI display (ARGB integer) |
+| `created_at` | INTEGER | NOT NULL | Creation timestamp |
+
+**Model:** `CalendarTagModel`  
+**Repository Methods:** `createTag()`, `getAllTags()`, `updateTag()`, `deleteTag()`
+
+**Key Points:**
+- **Independent System:** Separate from Balance Sheet `tags` table
+- **Color Coding:** Used to determine event display color on calendar
+
+#### Table: `diary_entries`
+
+**Purpose:** Daily journal entries (one per day)
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `date` | INTEGER | PRIMARY KEY | Date (milliseconds, normalized to midnight) |
+| `content` | TEXT | NOT NULL | Rich text / HTML / Markdown content |
+| `updated_at` | INTEGER | NOT NULL | Last update timestamp |
+
+**Model:** `DiaryEntryModel`  
+**Repository Methods:** `saveDiaryEntry()`, `getDiaryEntryByDate()`, `getAllDiaryEntries()`
+
+**Key Points:**
+- **One Per Day:** Date is primary key (unique constraint)
+- **Rich Text:** Content supports HTML/Markdown for formatting
+- **Autosave:** Recommended to implement autosave feature
+
+#### Table: `calendar_events`
+
+**Purpose:** Calendar events with recurrence and sticky warning system
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | TEXT | PRIMARY KEY | Unique identifier (generated) |
+| `title` | TEXT | NOT NULL | Event title |
+| `description` | TEXT | NULL | Optional description |
+| `date_time` | INTEGER | NOT NULL | Exact date and time (milliseconds) |
+| `duration_minutes` | INTEGER | NULL | Optional duration in minutes |
+| `tag_id` | TEXT | NULL, FOREIGN KEY | References `calendar_tags.id` (ON DELETE SET NULL) |
+| `recurrence_type` | INTEGER | NOT NULL | Recurrence enum as int (0=none, 1=weekly, 2=monthly, 3=yearly) |
+| `warn_days_before` | INTEGER | NOT NULL | Days before event to show sticky warning |
+| `alarm_before_hours` | INTEGER | NULL | Optional: hours before event for notification |
+| `created_at` | INTEGER | NOT NULL | Creation timestamp |
+
+**Model:** `CalendarEventModel`  
+**Foreign Keys:**
+- `tag_id` → `calendar_tags.id` (ON DELETE SET NULL)
+
+**Key Points:**
+- **Recurrence Handling:** System calculates next occurrence based on `recurrence_type`
+- **Sticky Warning System:** Event becomes "active/sticky" when `CurrentTime >= (EventTime - warnDaysBefore) AND CurrentTime < EventTime`
+- **Visual Indicators:** Events displayed on calendar with tag color; warning days show warning icon
+- **Precision:** Event expiration and notification triggers are precise to the minute
+
+**Migration:** Added in database version 14:
+```sql
+CREATE TABLE calendar_tags(
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  color_value INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+
+CREATE TABLE diary_entries(
+  date INTEGER PRIMARY KEY,
+  content TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE calendar_events(
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  date_time INTEGER NOT NULL,
+  duration_minutes INTEGER,
+  tag_id TEXT,
+  recurrence_type INTEGER NOT NULL,
+  warn_days_before INTEGER NOT NULL,
+  alarm_before_hours INTEGER,
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY(tag_id) REFERENCES calendar_tags(id) ON DELETE SET NULL
+);
+```
+
+### 2.7 Supplement Logger Tables
 
 #### Table: `ingredients_library`
 
@@ -485,6 +635,11 @@ erDiagram
     supplement_logs ||--o{ supplement_log_details : "has"
     
     user_stats ||--o{ user_stats_history : "snapshots"
+    
+    tags ||--o{ shopping_items : "categorizes"
+    transactions ||--o{ shopping_items : "linked to"
+    
+    calendar_tags ||--o{ calendar_events : "categorizes"
     
     exercise_definitions {
         int id PK
@@ -621,6 +776,47 @@ erDiagram
         real amount_total
         string unit
     }
+    
+    shopping_items {
+        string id PK
+        string name
+        real estimated_price
+        real actual_price
+        int priority
+        int quantity
+        string note
+        string tag_id FK
+        int is_purchased
+        int purchase_date
+        string linked_transaction_id FK
+        int created_at
+    }
+    
+    calendar_tags {
+        string id PK
+        string name
+        int color_value
+        int created_at
+    }
+    
+    diary_entries {
+        int date PK
+        string content
+        int updated_at
+    }
+    
+    calendar_events {
+        string id PK
+        string title
+        string description
+        int date_time
+        int duration_minutes
+        string tag_id FK
+        int recurrence_type
+        int warn_days_before
+        int alarm_before_hours
+        int created_at
+    }
 ```
 
 ### 3.2 ASCII Art ERD (Simplified)
@@ -746,6 +942,86 @@ erDiagram
 │ date (PK)            │
 │ habit_id (PK_FK)     │
 │ is_completed         │
+└─────────────────────┘
+
+┌─────────────────────┐
+│ tags                 │
+│  (Balance Tags)     │
+│─────────────────────│
+│ id (PK)              │
+│ name                 │
+│ color_value          │
+│ created_at           │
+└─────────────────────┘
+         │
+         │ (1-to-Many)
+         │
+         ▼
+┌─────────────────────┐
+│ transactions         │
+│  (Financial)         │
+│─────────────────────│
+│ id (PK)              │
+│ amount               │
+│ date                 │
+│ tag_id (FK)          │
+│ note                 │
+└─────────────────────┘
+         │
+         │ (1-to-Many)
+         │
+         ▼
+┌─────────────────────┐
+│ shopping_items       │
+│  (Shopping List)     │
+│─────────────────────│
+│ id (PK)              │
+│ name                 │
+│ estimated_price      │
+│ actual_price         │
+│ priority             │
+│ tag_id (FK)          │
+│ is_purchased         │
+│ purchase_date        │
+│ linked_transaction_  │
+│   id (FK)            │
+│ created_at           │
+└─────────────────────┘
+
+┌─────────────────────┐
+│ calendar_tags        │
+│  (Calendar Tags)     │
+│─────────────────────│
+│ id (PK)              │
+│ name                 │
+│ color_value          │
+│ created_at           │
+└─────────────────────┘
+         │
+         │ (1-to-Many)
+         │
+         ▼
+┌─────────────────────┐
+│ calendar_events       │
+│  (Events)            │
+│─────────────────────│
+│ id (PK)              │
+│ title                │
+│ date_time            │
+│ tag_id (FK)          │
+│ recurrence_type      │
+│ warn_days_before     │
+│ alarm_before_hours   │
+│ created_at           │
+└─────────────────────┘
+
+┌─────────────────────┐
+│ diary_entries        │
+│  (Daily Journal)     │
+│─────────────────────│
+│ date (PK)            │
+│ content              │
+│ updated_at           │
 └─────────────────────┘
 ```
 
@@ -1171,6 +1447,88 @@ See Section 4.2 in v1 document for detailed Balance Sheet architecture.
 
 See Section 4.3 in v1 document for detailed Supplement Logger architecture.
 
+### 6.5 Shopping List Module ⭐ NEW
+
+**Architecture Overview:**
+- **Repository:** `IShoppingRepository` / `SqlShoppingRepository`
+- **ViewModel:** `ShoppingViewModel`
+- **Integration:** Uses `IBalanceRepository` for tag management and transaction creation
+
+**Key Features:**
+- **Default Tag Logic:** If no tag selected, automatically uses "Shopping" tag (Light Brown)
+- **Purchase Flow:** When marking as purchased, creates expense transaction in Balance Sheet
+- **Historical Accuracy:** Purchase date can be backdated, affecting historical balance
+- **Variance Tracking:** Visual comparison of `actual_price` vs `estimated_price`
+- **Settings:** Auto-delete expense option (via SharedPreferences)
+
+**Data Flow:**
+```
+User marks item as purchased
+    │
+    ├─→ Show dialog (actual price, date)
+    │
+    ├─→ Update ShoppingItem (is_purchased = true, actual_price, purchase_date)
+    │
+    └─→ Create Transaction in Balance Sheet (via BalanceViewModel)
+            │
+            └─→ Link transaction_id to ShoppingItem
+```
+
+**Files:**
+- `lib/data/models/shopping_item_model.dart`
+- `lib/data/models/shopping_priority.dart`
+- `lib/data/repositories/i_shopping_repository.dart`
+- `lib/data/repositories/sql_shopping_repository.dart`
+- `lib/ui/viewmodels/shopping_view_model.dart`
+- `lib/ui/screens/shopping/shopping_list_screen.dart`
+- `lib/ui/screens/shopping/add_edit_shopping_item_sheet.dart`
+- `lib/ui/screens/shopping/mark_purchased_dialog.dart`
+- `lib/ui/screens/shopping/shopping_settings_sheet.dart`
+
+### 6.6 Calendar & Diary Module ⭐ NEW
+
+**Architecture Overview:**
+- **Repository:** `ICalendarRepository` / `SqlCalendarRepository`
+- **ViewModel:** `CalendarViewModel`
+- **Independent Tag System:** Uses `calendar_tags` (separate from Balance Sheet tags)
+
+**Key Features:**
+- **Sticky Warning System:** Events become "active" when within `warnDaysBefore` window
+- **Recurrence Handling:** Calculates next occurrence for Weekly/Monthly/Yearly events
+- **Visual Indicators:** Calendar grid shows event colors and warning icons
+- **Diary Entries:** One entry per day with rich text support
+- **Precision:** Event expiration and notifications precise to the minute
+
+**Sticky Warning Logic:**
+```dart
+bool isSticky(DateTime currentTime) {
+  final nextOccurrence = getNextOccurrence(currentTime);
+  final warningStart = nextOccurrence.subtract(Duration(days: warnDaysBefore));
+  return (currentTime.isAfter(warningStart) || currentTime.isAtSameMomentAs(warningStart)) &&
+         currentTime.isBefore(nextOccurrence);
+}
+```
+
+**Recurrence Calculation:**
+- **None:** Returns original `dateTime`
+- **Weekly:** Adds 7 days until future date
+- **Monthly:** Adds 1 month until future date
+- **Yearly:** Adds 1 year until future date
+
+**Files:**
+- `lib/data/models/calendar_tag_model.dart`
+- `lib/data/models/diary_entry_model.dart`
+- `lib/data/models/calendar_event_model.dart`
+- `lib/data/models/recurrence_type.dart`
+- `lib/data/repositories/i_calendar_repository.dart`
+- `lib/data/repositories/sql_calendar_repository.dart`
+- `lib/ui/viewmodels/calendar_view_model.dart`
+- `lib/ui/screens/calendar/calendar_hub_screen.dart`
+- `lib/ui/screens/calendar/daily_view_screen.dart`
+- `lib/ui/screens/calendar/calendar_view_screen.dart`
+- `lib/ui/screens/calendar/all_events_list_screen.dart`
+- `lib/ui/screens/calendar/add_edit_event_sheet.dart`
+
 ---
 
 ## 7. Export & Backup Mechanism
@@ -1245,18 +1603,21 @@ Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
 
 This v2 architecture documentation provides a **production-ready** foundation for EmeraldApp, addressing:
 
-- ✅ **Enhanced Database Schema:** Added `user_stats_history` and enhanced `habits` table
-- ✅ **Type Safety:** Enum-based type system for `ExerciseType` and `BodyPart`
+- ✅ **Enhanced Database Schema:** Added `user_stats_history`, enhanced `habits` table, `shopping_items`, and Calendar & Diary tables
+- ✅ **Type Safety:** Enum-based type system for `ExerciseType`, `BodyPart`, `RecurrenceType`, and `ShoppingPriority`
 - ✅ **Advanced Logic:** DELETE-ALL-THEN-INSERT for routine editing, batch updates for reordering
 - ✅ **Multi-Module Integration:** DateProvider triggers reset for both Exercise and Habit modules
 - ✅ **Visual Documentation:** Complete ERD diagrams (Mermaid and ASCII)
 - ✅ **Multiple Body Parts:** Comma-separated string approach for exercise body parts
+- ✅ **Shopping List Module:** Purchase tracking with Balance Sheet integration
+- ✅ **Calendar & Diary Module:** Event management with sticky warnings and recurrence handling
 
 For specific implementation details, refer to the code files mentioned in each section.
 
 ---
 
 **Document Maintained By:** Development Team  
-**Version:** 2.0 (Production-Ready)  
+**Version:** 2.1 (Production-Ready + Shopping List + Calendar & Diary)  
+**Last Updated:** December 2025  
 **Questions or Updates:** Update this document when architecture changes occur.
 

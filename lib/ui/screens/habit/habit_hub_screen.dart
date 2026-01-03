@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/life_goal_model.dart';
 import '../../viewmodels/habit_view_model.dart';
+import '../../widgets/quick_filter_bar.dart';
 import 'daily_logger_screen.dart';
+import 'edit_goal_sheet.dart';
 import 'goal_habit_manager_screen.dart';
 
 /// Main hub screen for the Habit & Goal Logger module.
@@ -29,6 +32,34 @@ class HabitHubScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // Quick Filter Bar for Goals
+                if (vm.goals.isNotEmpty)
+                  QuickFilterBar<LifeGoalModel>(
+                    items: vm.goals,
+                    selectedItem: vm.selectedGoalId != null
+                        ? vm.goals.firstWhere(
+                            (g) => g.id == vm.selectedGoalId,
+                            orElse: () => vm.goals.first,
+                          )
+                        : null,
+                    onItemSelected: (goal) {
+                      vm.setSelectedGoal(goal?.id);
+                    },
+                    onItemLongPress: (goal) {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => ChangeNotifierProvider.value(
+                          value: vm,
+                          child: EditGoalSheet(goal: goal),
+                        ),
+                      );
+                    },
+                    getItemId: (goal) => goal.id,
+                    getItemName: (goal) => goal.title,
+                    getItemColor: null, // Goals don't have colors
+                  ),
+                if (vm.goals.isNotEmpty) const SizedBox(height: 16),
                 // Today's Progress Card
                 _buildProgressCard(context, vm),
                 const SizedBox(height: 24),

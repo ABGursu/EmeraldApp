@@ -4,14 +4,19 @@ import 'package:provider/provider.dart';
 import 'data/local_db/database_helper.dart';
 import 'ui/screens/balance/balance_screen.dart';
 import 'ui/screens/backup/backup_settings_screen.dart';
+import 'ui/screens/calendar/calendar_hub_screen.dart';
 import 'ui/screens/exercise/exercise_log_screen.dart';
 import 'ui/screens/habit/habit_hub_screen.dart';
+import 'ui/screens/shopping/shopping_list_screen.dart';
 import 'ui/screens/supplement/supplement_hub_screen.dart';
+import 'data/repositories/sql_balance_repository.dart';
 import 'ui/providers/date_provider.dart';
 import 'ui/viewmodels/balance_view_model.dart';
+import 'ui/viewmodels/calendar_view_model.dart';
 import 'ui/viewmodels/daily_log_view_model.dart';
 import 'ui/viewmodels/exercise_library_view_model.dart';
 import 'ui/viewmodels/habit_view_model.dart';
+import 'ui/viewmodels/shopping_view_model.dart';
 import 'ui/viewmodels/supplement_view_model.dart';
 
 Future<void> main() async {
@@ -49,6 +54,14 @@ class EmeraldApp extends StatelessWidget {
           create: (context) => HabitViewModel(
             dateProvider: context.read<DateProvider>(),
           )..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ShoppingViewModel(
+            balanceRepository: SqlBalanceRepository(),
+          )..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CalendarViewModel()..init(),
         ),
       ],
       child: MaterialApp(
@@ -166,6 +179,34 @@ class MainMenuScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => const HabitHubScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          _buildModuleCard(
+            context,
+            title: 'Shopping List',
+            subtitle: 'Plan and track your purchases',
+            icon: Icons.shopping_cart_outlined,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ShoppingListScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          _buildModuleCard(
+            context,
+            title: 'Calendar & Diary',
+            subtitle: 'Events, reminders & daily journal',
+            icon: Icons.calendar_today,
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CalendarHubScreen(),
                 ),
               );
             },

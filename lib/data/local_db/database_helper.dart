@@ -5,7 +5,7 @@ import 'hardcoded_routines.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 12;
+  static const int _dbVersion = 14;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -72,6 +72,12 @@ class DatabaseHelper {
     await _createExerciseLoggerTablesV8(db);
     await _seedExerciseDefinitions(db);
     await _seedHardcodedRoutines(db);
+
+    // Shopping List Module Tables (v13)
+    await _createShoppingListTables(db);
+
+    // Calendar & Diary Module Tables (v14)
+    await _createCalendarTables(db);
   }
 
   Future<void> _createSupplementTables(Database db) async {
@@ -584,6 +590,81 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> _createShoppingListTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE shopping_items(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        estimated_price REAL NOT NULL,
+        actual_price REAL,
+        priority INTEGER NOT NULL,
+        quantity INTEGER,
+        note TEXT,
+        tag_id TEXT,
+        is_purchased INTEGER NOT NULL DEFAULT 0,
+        purchase_date INTEGER,
+        linked_transaction_id TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE SET NULL,
+        FOREIGN KEY(linked_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+      )
+    ''');
+
+    // Seed a default "Shopping" tag if it doesn't exist
+    final existingTag = await db.query(
+      'tags',
+      where: 'name = ?',
+      whereArgs: ['Shopping'],
+      limit: 1,
+    );
+    if (existingTag.isEmpty) {
+      await db.insert('tags', {
+        'id': 'shopping_default_tag',
+        'name': 'Shopping',
+        'color_value': 0xFFD2B48C, // Light Brown
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+      });
+    }
+  }
+
+  Future<void> _createCalendarTables(Database db) async {
+    // Calendar Tags (Independent tag system for calendar)
+    await db.execute('''
+      CREATE TABLE calendar_tags(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        color_value INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    // Diary Entries (One per day)
+    await db.execute('''
+      CREATE TABLE diary_entries(
+        date INTEGER PRIMARY KEY,
+        content TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+
+    // Calendar Events
+    await db.execute('''
+      CREATE TABLE calendar_events(
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        date_time INTEGER NOT NULL,
+        duration_minutes INTEGER,
+        tag_id TEXT,
+        recurrence_type INTEGER NOT NULL,
+        warn_days_before INTEGER NOT NULL,
+        alarm_before_hours INTEGER,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(tag_id) REFERENCES calendar_tags(id) ON DELETE SET NULL
+      )
+    ''');
+  }
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       await db.execute('''
@@ -748,6 +829,14 @@ class DatabaseHelper {
         // Column might already exist
       }
     }
+    if (oldVersion < 13) {
+      // Add Shopping List module tables
+      await _createShoppingListTables(db);
+    }
+    if (oldVersion < 14) {
+      // Add Calendar & Diary module tables
+      await _createCalendarTables(db);
+    }
   }
 
   /// Seeds the exercise definitions database with anatomical exercise data
@@ -755,192 +844,192 @@ class DatabaseHelper {
     // Anatomical Exercise Database
     final anatomicalExerciseDatabase = {
       // --- ALT VÜCUT (LOWER BODY) ---
-      "Quadriceps (Ön Bacak & Diz Ekstansiyonu)": [
-        "Cossack Squats",
-        "Bulgarian Split Squats",
-        "Shrimp Squats",
-        "Deep Squats",
-        "Jump Squats",
-        "Jump Lunges",
-        "Walking Lunges",
-        "Step Downs",
-        "Barbell Squats",
-        "Smith Machine Squat",
-        "Full Range of Motion Leg Presses",
-        "Lying Leg Presses",
-        "Ankle Twisted Squats",
+      'Quadriceps (Ön Bacak & Diz Ekstansiyonu)': [
+        'Cossack Squats',
+        'Bulgarian Split Squats',
+        'Shrimp Squats',
+        'Deep Squats',
+        'Jump Squats',
+        'Jump Lunges',
+        'Walking Lunges',
+        'Step Downs',
+        'Barbell Squats',
+        'Smith Machine Squat',
+        'Full Range of Motion Leg Presses',
+        'Lying Leg Presses',
+        'Ankle Twisted Squats',
       ],
-      "Hamstrings & Gluteus Maximus (Arka Bacak & Kalça)": [
-        "Feet Elevated Leg Curls",
-        "Glute Bridges",
-        "Hip Thrusts",
-        "BW Hip Thrusts",
-        "Romanian Deadlifts",
-        "Dumbbell Deadlifts",
-        "Resistance Band RDL",
-        "Lying Leg Curls",
-        "Kettlebell Swings",
+      'Hamstrings & Gluteus Maximus (Arka Bacak & Kalça)': [
+        'Feet Elevated Leg Curls',
+        'Glute Bridges',
+        'Hip Thrusts',
+        'BW Hip Thrusts',
+        'Romanian Deadlifts',
+        'Dumbbell Deadlifts',
+        'Resistance Band RDL',
+        'Lying Leg Curls',
+        'Kettlebell Swings',
       ],
-      "Hip Flexors (Kalça Bükücüler & Patlayıcılık)": [
-        "Slow Mountain Climbers",
-        "Mountain Climbers",
-        "High-Knee Sprints",
-        "Box Jumps",
+      'Hip Flexors (Kalça Bükücüler & Patlayıcılık)': [
+        'Slow Mountain Climbers',
+        'Mountain Climbers',
+        'High-Knee Sprints',
+        'Box Jumps',
       ],
-      "Calves (Kalf - Gastrocnemius & Soleus)": [
-        "Calf Raises",
-        "Smith Machine Calf Raise",
-        "Toe Raises",
-        "High-Heels Sprints",
+      'Calves (Kalf - Gastrocnemius & Soleus)': [
+        'Calf Raises',
+        'Smith Machine Calf Raise',
+        'Toe Raises',
+        'High-Heels Sprints',
       ],
-      "Tibialis Anterior (Kaval Kemiği & Ayak Bileği)": [
-        "Tibialis Raises",
-        "Ankle Twisted Squats",
+      'Tibialis Anterior (Kaval Kemiği & Ayak Bileği)': [
+        'Tibialis Raises',
+        'Ankle Twisted Squats',
       ],
       // --- ÜST VÜCUT İTİŞ (UPPER PUSH) ---
-      "Pectoralis Major (Göğüs)": [
-        "Pushups",
-        "Decline Pushups",
-        "Diamond Pushups",
-        "Plyometric Pushups",
-        "Archer Pushups",
-        "Dips",
-        "Feet Elevated Bench Dips",
-        "Plyometric Feet Elevated Bench Dips",
-        "Assisted Dip Machine",
-        "Incline Dumbell Press",
-        "Dumbbell Press",
-        "Resistance Band Fly",
+      'Pectoralis Major (Göğüs)': [
+        'Pushups',
+        'Decline Pushups',
+        'Diamond Pushups',
+        'Plyometric Pushups',
+        'Archer Pushups',
+        'Dips',
+        'Feet Elevated Bench Dips',
+        'Plyometric Feet Elevated Bench Dips',
+        'Assisted Dip Machine',
+        'Incline Dumbell Press',
+        'Dumbbell Press',
+        'Resistance Band Fly',
       ],
-      "Anterior Deltoid (Ön Omuz)": [
-        "Military Press",
-        "Dumbbell Shoulder Press",
-        "Shoulder Press Machine",
-        "Z-Press",
-        "Banded Shoulder Press",
-        "Pike Pushups",
-        "Pseudo Planche Pushups",
-        "Planche Progressions",
+      'Anterior Deltoid (Ön Omuz)': [
+        'Military Press',
+        'Dumbbell Shoulder Press',
+        'Shoulder Press Machine',
+        'Z-Press',
+        'Banded Shoulder Press',
+        'Pike Pushups',
+        'Pseudo Planche Pushups',
+        'Planche Progressions',
       ],
-      "Triceps Brachii (Arka Kol)": [
-        "Triceps Overhead Extension",
-        "Prone Overhead Tricep Extensions",
-        "Cable Triceps Extension",
-        "Tricep Pushdowns",
-        "Feet Elevated Bench Dips",
+      'Triceps Brachii (Arka Kol)': [
+        'Triceps Overhead Extension',
+        'Prone Overhead Tricep Extensions',
+        'Cable Triceps Extension',
+        'Tricep Pushdowns',
+        'Feet Elevated Bench Dips',
       ],
       // --- ÜST VÜCUT ÇEKİŞ (UPPER PULL) ---
-      "Latissimus Dorsi (Kanat - Dikey Çekiş)": [
-        "Pullups",
-        "Chinups",
-        "Neutral Grip Pullups",
-        "Wide Grip Australian Pullups",
-        "One Towel Pullups",
-        "Lat Pulldowns",
-        "Supinated Lat Pulldowns",
-        "Explosive Lat Pulldown",
-        "Resistance Band Pulls for Lats",
+      'Latissimus Dorsi (Kanat - Dikey Çekiş)': [
+        'Pullups',
+        'Chinups',
+        'Neutral Grip Pullups',
+        'Wide Grip Australian Pullups',
+        'One Towel Pullups',
+        'Lat Pulldowns',
+        'Supinated Lat Pulldowns',
+        'Explosive Lat Pulldown',
+        'Resistance Band Pulls for Lats',
       ],
-      "Rhomboids & Mid-Traps (Orta Sırt - Yatay Çekiş)": [
-        "Chest Supported Dumbbell Row",
-        "Knee to Bench Dumbell Row",
-        "Inverted Row",
-        "Barbell Row",
-        "Narrow Cable Row",
-        "Wide Seated Cable Rows",
-        "Incline Rows",
-        "T-Bar Rows",
-        "Resistance Band Rows",
-        "Feet Elevated Inverted Rows",
+      'Rhomboids & Mid-Traps (Orta Sırt - Yatay Çekiş)': [
+        'Chest Supported Dumbbell Row',
+        'Knee to Bench Dumbell Row',
+        'Inverted Row',
+        'Barbell Row',
+        'Narrow Cable Row',
+        'Wide Seated Cable Rows',
+        'Incline Rows',
+        'T-Bar Rows',
+        'Resistance Band Rows',
+        'Feet Elevated Inverted Rows',
       ],
-      "Upper Trapezius (Üst Trapez)": [
-        "Dumbbell Shrug",
-        "Smith Machine Shrugs",
-        "Z Bar Upright Row",
-        "Dumbbell Upright Rows",
-        "Banded Upright Row",
+      'Upper Trapezius (Üst Trapez)': [
+        'Dumbbell Shrug',
+        'Smith Machine Shrugs',
+        'Z Bar Upright Row',
+        'Dumbbell Upright Rows',
+        'Banded Upright Row',
       ],
-      "Posterior & Lateral Deltoid (Arka & Yan Omuz)": [
-        "Dumbbell Lateral Raise",
-        "Bentover Lateral Raise",
-        "Resistance Band Lateral Raises",
-        "Light Lateral Raises",
-        "Reverse Flies",
+      'Posterior & Lateral Deltoid (Arka & Yan Omuz)': [
+        'Dumbbell Lateral Raise',
+        'Bentover Lateral Raise',
+        'Resistance Band Lateral Raises',
+        'Light Lateral Raises',
+        'Reverse Flies',
       ],
-      "Rotator Cuff & Scapular Health (Omuz Sağlığı)": [
-        "Cable Face Pull",
-        "Banded Face Pull",
-        "Scapular Pull Ups",
-        "Scapular Pushups",
-        "Wall Walks",
-        "Handstand Hold",
-        "Dead Hangs",
+      'Rotator Cuff & Scapular Health (Omuz Sağlığı)': [
+        'Cable Face Pull',
+        'Banded Face Pull',
+        'Scapular Pull Ups',
+        'Scapular Pushups',
+        'Wall Walks',
+        'Handstand Hold',
+        'Dead Hangs',
       ],
-      "Biceps Brachii (Pazu)": [
-        "Biceps Preacher Curl",
-        "Hammer Curl",
-        "Pelican Curl",
+      'Biceps Brachii (Pazu)': [
+        'Biceps Preacher Curl',
+        'Hammer Curl',
+        'Pelican Curl',
       ],
-      "Forearms & Grip Strength (Ön Kol & Tutuş)": [
-        "Wrist Rolls",
-        "Forearm Twist",
-        "Hand Grippers",
-        "Finger Extensor Band",
-        "Grip Work",
+      'Forearms & Grip Strength (Ön Kol & Tutuş)': [
+        'Wrist Rolls',
+        'Forearm Twist',
+        'Hand Grippers',
+        'Finger Extensor Band',
+        'Grip Work',
         "Farmer's Carry",
       ],
       // --- CORE & STABILITY (MERKEZ BÖLGE) ---
-      "Rectus Abdominis (Karın - Alt/Üst)": [
-        "Crunches",
-        "Sprinter Sit-Ups",
-        "Leg Raises",
-        "Hanging Leg Raises",
-        "Ab Rollout",
-        "Dragon Flag Negatives",
-        "Superman Snap-Ups",
+      'Rectus Abdominis (Karın - Alt/Üst)': [
+        'Crunches',
+        'Sprinter Sit-Ups',
+        'Leg Raises',
+        'Hanging Leg Raises',
+        'Ab Rollout',
+        'Dragon Flag Negatives',
+        'Superman Snap-Ups',
       ],
-      "Obliques (Yan Karın & Rotasyon)": [
-        "Russian Twists",
-        "Windshield Wipers",
-        "Lying Windshield Wipers",
-        "Resistance Band WoodChoppers",
-        "Cable Woodchoppers",
-        "Side Plank",
-        "Side to Side Turning Planks",
-        "Plank with Reach",
-        "Side Kickthroughs",
-        "Dumbbell Side Bends",
-        "Dumbbell Twists",
+      'Obliques (Yan Karın & Rotasyon)': [
+        'Russian Twists',
+        'Windshield Wipers',
+        'Lying Windshield Wipers',
+        'Resistance Band WoodChoppers',
+        'Cable Woodchoppers',
+        'Side Plank',
+        'Side to Side Turning Planks',
+        'Plank with Reach',
+        'Side Kickthroughs',
+        'Dumbbell Side Bends',
+        'Dumbbell Twists',
       ],
-      "Transverse Abdominis & Stability (Derin Core)": [
-        "Plank",
-        "RKC Plank",
-        "Hollow Body Hold",
-        "Dead Bug",
-        "Bird-Dog",
-        "Vacuum Breaths",
-        "Plank with Thrusts",
+      'Transverse Abdominis & Stability (Derin Core)': [
+        'Plank',
+        'RKC Plank',
+        'Hollow Body Hold',
+        'Dead Bug',
+        'Bird-Dog',
+        'Vacuum Breaths',
+        'Plank with Thrusts',
       ],
-      "Erector Spinae (Bel & Omurga)": [
-        "Hyperextensions",
-        "Reverse Hyperextensions",
-        "Tuck Reverse Hyperextensions",
-        "Superman Hold",
-        "Reverse Plank",
+      'Erector Spinae (Bel & Omurga)': [
+        'Hyperextensions',
+        'Reverse Hyperextensions',
+        'Tuck Reverse Hyperextensions',
+        'Superman Hold',
+        'Reverse Plank',
       ],
       // --- CARDIO & POWER ---
-      "Full Body Power & Cardio": [
-        "Jump Rope",
-        "Cable Punches",
-        "Resistance Band Punches",
-        "Banded Boxing",
-        "Ground Slam Simulation",
-        "Kegels",
+      'Full Body Power & Cardio': [
+        'Jump Rope',
+        'Cable Punches',
+        'Resistance Band Punches',
+        'Banded Boxing',
+        'Ground Slam Simulation',
+        'Kegels',
       ],
     };
 
     // Helper function to extract default type from exercise name
-    String? _extractDefaultType(String exerciseName) {
+    String? extractDefaultType(String exerciseName) {
       final lower = exerciseName.toLowerCase();
       if (lower.contains('bw ') ||
           lower.contains('bodyweight') ||
@@ -1030,7 +1119,7 @@ class DatabaseHelper {
         if (existing.isEmpty) {
           await db.insert('exercise_definitions', {
             'name': exerciseName,
-            'default_type': _extractDefaultType(exerciseName),
+            'default_type': extractDefaultType(exerciseName),
             'body_part': bodyPart,
           });
         }
@@ -1043,7 +1132,7 @@ class DatabaseHelper {
     final hardcodedRoutines = getHardcodedRoutines();
 
     // Helper function to parse sets and reps from note
-    Map<String, int> _parseSetsReps(String? note) {
+    Map<String, int> parseSetsReps(String? note) {
       if (note == null || note.isEmpty) {
         return {'sets': 3, 'reps': 10};
       }
@@ -1091,7 +1180,7 @@ class DatabaseHelper {
         final exerciseId = exerciseMap[item.exerciseName];
 
         if (exerciseId != null) {
-          final setsReps = _parseSetsReps(item.note);
+          final setsReps = parseSetsReps(item.note);
           await db.insert('routine_items', {
             'routine_id': routineId,
             'exercise_definition_id': exerciseId,

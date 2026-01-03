@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/exercise_definition_model.dart';
 import '../../../ui/viewmodels/exercise_library_view_model.dart';
 
 class CreateRoutineSheet extends StatefulWidget {
@@ -72,7 +71,8 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
             Expanded(
               child: vm.exerciseDefinitions.isEmpty
                   ? const Center(
-                      child: Text('No exercises available. Add some in the Library tab.'),
+                      child: Text(
+                          'No exercises available. Add some in the Library tab.'),
                     )
                   : ListView.builder(
                       itemCount: vm.exerciseDefinitions.length,
@@ -100,8 +100,8 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
                                 _repsControllers[def.id] =
                                     TextEditingController(text: '10');
                               } else {
-                                _selectedExercises
-                                    .removeWhere((e) => e['exerciseDefinitionId'] == def.id);
+                                _selectedExercises.removeWhere(
+                                    (e) => e['exerciseDefinitionId'] == def.id);
                                 _setsControllers[def.id]?.dispose();
                                 _repsControllers[def.id]?.dispose();
                                 _setsControllers.remove(def.id);
@@ -124,8 +124,8 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
                   itemBuilder: (context, index) {
                     final item = _selectedExercises[index];
                     final defId = item['exerciseDefinitionId'] as int;
-                    final def = vm.exerciseDefinitions
-                        .firstWhere((d) => d.id == defId);
+                    final def =
+                        vm.exerciseDefinitions.firstWhere((d) => d.id == defId);
 
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 4),
@@ -219,4 +219,3 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
     }
   }
 }
-

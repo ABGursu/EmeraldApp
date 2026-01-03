@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../data/models/tag_model.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../ui/viewmodels/balance_view_model.dart';
 import '../../../utils/date_formats.dart';
 import '../../widgets/color_coded_selector.dart';
+import '../../widgets/quick_filter_bar.dart';
 import 'add_transaction_sheet.dart';
+import 'edit_tag_sheet.dart';
 import 'pie_chart_sheet.dart';
 
 class BalanceScreen extends StatelessWidget {
@@ -57,6 +60,33 @@ class BalanceScreen extends StatelessWidget {
                   children: [
                     _CurrentBalanceCard(balance: vm.currentBalance),
                     _BudgetOverviewCard(vm: vm),
+                    // Quick Filter Bar
+                    if (vm.tags.isNotEmpty)
+                      QuickFilterBar<TagModel>(
+                        items: vm.tags,
+                        selectedItem: vm.selectedTagId != null
+                            ? vm.tags.firstWhere(
+                                (t) => t.id == vm.selectedTagId,
+                                orElse: () => vm.tags.first,
+                              )
+                            : null,
+                        onItemSelected: (tag) {
+                          vm.setSelectedTag(tag?.id);
+                        },
+                        onItemLongPress: (tag) {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => ChangeNotifierProvider.value(
+                              value: vm,
+                              child: EditTagSheet(tag: tag),
+                            ),
+                          );
+                        },
+                        getItemId: (tag) => tag.id,
+                        getItemName: (tag) => tag.name,
+                        getItemColor: (tag) => tag.colorValue,
+                      ),
                     Expanded(
                       child: _TransactionList(
                         grouped: vm.groupedByDate,
@@ -137,12 +167,30 @@ class _BudgetOverviewCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20),
-                onPressed: () => _showEditBudgetDialog(context, vm, budget),
-                tooltip: 'Edit Budget',
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.settings, size: 20),
+                    onPressed: () => _showBudgetSettingsDialog(context, vm),
+                    tooltip: 'Budget Settings',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20),
+                    onPressed: () => _showEditBudgetDialog(context, vm, budget),
+                    tooltip: 'Edit Budget',
+                  ),
+                ],
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          // Display fiscal period
+          Text(
+            'Period: ${vm.getCurrentFiscalPeriodText()}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
           ),
           const SizedBox(height: 8),
           if (!hasBudget)
@@ -237,6 +285,81 @@ class _BudgetOverviewCard extends StatelessWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Please enter a valid positive amount'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBudgetSettingsDialog(
+    BuildContext context,
+    BalanceViewModel vm,
+  ) {
+    final controller = TextEditingController(
+      text: vm.budgetStartDay.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Budget Start Day'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Set the day of the month when your budget period starts (1-31).',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Start Day',
+                border: OutlineInputBorder(),
+                helperText: 'Range: 1-31',
+              ),
+              keyboardType: TextInputType.number,
+              autofocus: true,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Current Period: ${vm.getCurrentFiscalPeriodText()}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final value = int.tryParse(controller.text);
+              if (value != null && value >= 1 && value <= 31) {
+                await vm.setBudgetStartDay(value);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Budget start day set to $value. New period: ${vm.getCurrentFiscalPeriodText()}',
+                      ),
+                    ),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid day (1-31)'),
                   ),
                 );
               }

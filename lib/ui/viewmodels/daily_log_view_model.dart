@@ -9,9 +9,10 @@ import '../../data/models/workout_log_model.dart';
 import '../../data/repositories/i_exercise_log_repository.dart';
 import '../../data/repositories/sql_exercise_log_repository.dart';
 import '../../utils/date_formats.dart';
+import '../../utils/date_range_persistence.dart';
 import '../providers/date_provider.dart';
 
-class DailyLogViewModel extends ChangeNotifier {
+class DailyLogViewModel extends ChangeNotifier with DateRangePersistence {
   DailyLogViewModel({
     IExerciseLogRepository? repository,
     DateProvider? dateProvider,
@@ -25,7 +26,18 @@ class DailyLogViewModel extends ChangeNotifier {
   UserStats? _userStats;
   bool _loading = false;
 
+  // Date range for history/export views
+  DateTime? _historyStartDate;
+  DateTime? _historyEndDate;
+  bool _isRollingDate = false;
+
+  @override
+  String get moduleName => 'exercise';
+
   DateTime get selectedDate => _dateProvider?.selectedDate ?? DateTime.now();
+  DateTime? get historyStartDate => _historyStartDate;
+  DateTime? get historyEndDate => _historyEndDate;
+  bool get isRollingDate => _isRollingDate;
   List<WorkoutLog> get logs => _logs;
   UserStats? get userStats => _userStats;
   bool get isLoading => _loading;
@@ -34,7 +46,37 @@ class DailyLogViewModel extends ChangeNotifier {
     // Listen to date changes
     _dateProvider?.addListener(_onDateChanged);
     await loadUserStats();
+    await loadDateRangeFromPrefs();
     await loadLogsForDate(selectedDate);
+  }
+
+  /// Loads persisted date range from SharedPreferences
+  Future<void> loadDateRangeFromPrefs() async {
+    final range = await loadDateRange();
+    _historyStartDate = range.startDate;
+    _historyEndDate = range.endDate;
+    _isRollingDate = range.isRollingToday;
+    notifyListeners();
+  }
+
+  /// Sets the date range for history/export and persists it
+  Future<void> setHistoryDateRange({
+    required DateTime? startDate,
+    required DateTime? endDate,
+  }) async {
+    _historyStartDate = startDate;
+    _historyEndDate = endDate;
+    await saveDateRange(startDate: startDate, endDate: endDate);
+    notifyListeners();
+  }
+
+  /// Clears the history date range
+  Future<void> clearHistoryDateRange() async {
+    _historyStartDate = null;
+    _historyEndDate = null;
+    _isRollingDate = false;
+    await clearDateRange();
+    notifyListeners();
   }
 
   @override

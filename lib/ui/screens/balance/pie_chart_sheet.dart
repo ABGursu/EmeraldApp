@@ -23,12 +23,28 @@ class _PieChartSheetState extends State<PieChartSheet> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _fromDate = DateTime(now.year, now.month, 1);
-    _toDate = now;
+    // Initialize with fiscal month - will be set in build when ViewModel is available
+    _fromDate = null;
+    _toDate = null;
   }
 
-  Future<void> _pickDateRange() async {
+  /// Initializes dates from fiscal month (called when ViewModel is available)
+  void _initializeFromFiscalMonth(BalanceViewModel vm) {
+    if (!_useCustomRange && (_fromDate == null || _toDate == null)) {
+      final fiscal = vm.getCurrentFiscalMonth();
+      _fromDate = fiscal.start;
+      _toDate = fiscal.end;
+    }
+  }
+
+  Future<void> _pickDateRange(BalanceViewModel vm) async {
+    // Ensure dates are initialized from fiscal month if not set
+    if (_fromDate == null || _toDate == null) {
+      final fiscal = vm.getCurrentFiscalMonth();
+      _fromDate = fiscal.start;
+      _toDate = fiscal.end;
+    }
+
     final range = await showDateRangePicker(
       context: context,
       initialDateRange: _fromDate != null && _toDate != null
@@ -77,11 +93,11 @@ class _PieChartSheetState extends State<PieChartSheet> {
     }
   }
 
-  void _resetToCurrentMonth() {
-    final now = DateTime.now();
+  void _resetToCurrentFiscalMonth(BalanceViewModel vm) {
+    final fiscal = vm.getCurrentFiscalMonth();
     setState(() {
-      _fromDate = DateTime(now.year, now.month, 1);
-      _toDate = now;
+      _fromDate = fiscal.start;
+      _toDate = fiscal.end;
       _useCustomRange = false;
     });
   }
@@ -110,14 +126,20 @@ class _PieChartSheetState extends State<PieChartSheet> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<BalanceViewModel>();
+    
+    // Initialize from fiscal month if not set
+    _initializeFromFiscalMonth(vm);
+    
+    // Use custom range if set, otherwise use fiscal month
     final data = _fromDate != null && _toDate != null
         ? vm.expensesByTagInRange(_fromDate!, _toDate!)
         : vm.currentMonthExpensesByTag();
     final total = data.values.fold<double>(0, (p, e) => p + e);
 
+    // Display range text - show fiscal period if not custom
     final rangeText = _useCustomRange && _fromDate != null && _toDate != null
         ? '${formatDate(_fromDate!)} - ${formatDate(_toDate!)}'
-        : 'This Month';
+        : vm.getCurrentFiscalPeriodText();
 
     return SafeArea(
       child: Padding(
@@ -131,9 +153,23 @@ class _PieChartSheetState extends State<PieChartSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      'Expenses by Tag',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Expenses by Tag',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        if (!_useCustomRange && _fromDate != null && _toDate != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Period: ${vm.getCurrentFiscalPeriodText()}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   IconButton(
@@ -149,15 +185,15 @@ class _PieChartSheetState extends State<PieChartSheet> {
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.date_range),
                       label: Text(rangeText),
-                      onPressed: _pickDateRange,
+                      onPressed: () => _pickDateRange(vm),
                     ),
                   ),
                   if (_useCustomRange) ...[
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.refresh),
-                      tooltip: 'Reset to current month',
-                      onPressed: _resetToCurrentMonth,
+                      tooltip: 'Reset to current fiscal period',
+                      onPressed: () => _resetToCurrentFiscalMonth(vm),
                     ),
                   ],
                   const SizedBox(width: 8),
