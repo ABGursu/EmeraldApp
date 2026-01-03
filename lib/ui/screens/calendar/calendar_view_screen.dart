@@ -12,21 +12,11 @@ class CalendarViewScreen extends StatefulWidget {
 
 class _CalendarViewScreenState extends State<CalendarViewScreen> {
   DateTime _displayedMonth = DateTime.now();
-  bool _hasPrecached = false;
 
   @override
   Widget build(BuildContext context) {
     return Consumer<CalendarViewModel>(
       builder: (context, vm, _) {
-        // Pre-cache events for the current month on first build
-        if (!_hasPrecached) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              vm.precacheEventsForMonth(_displayedMonth);
-              _hasPrecached = true;
-            }
-          });
-        }
         
         return Column(
           children: [
@@ -57,8 +47,6 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
                   _displayedMonth.month - 1,
                 );
               });
-              // Pre-cache events for the new month
-              vm.precacheEventsForMonth(_displayedMonth);
             },
           ),
           Text(
@@ -74,8 +62,6 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
                   _displayedMonth.month + 1,
                 );
               });
-              // Pre-cache events for the new month
-              vm.precacheEventsForMonth(_displayedMonth);
             },
           ),
         ],
@@ -132,16 +118,23 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
         final warningEvents = vm.getWarningEventsForDate(day);
         final hasEvent = eventsForDay.isNotEmpty;
         final hasWarning = warningEvents.isNotEmpty;
+        
+        // Determine background color: Warning (yellow) takes priority over event (tag color)
+        Color? backgroundColor;
+        if (hasWarning) {
+          // Alarm/warning days - yellow background
+          backgroundColor = Colors.amber.withValues(alpha: 0.3);
+        } else if (hasEvent && eventsForDay.first.tagId != null) {
+          // Event days - tag color background
+          backgroundColor = Color(vm.getTagById(eventsForDay.first.tagId)?.colorValue ?? 0)
+              .withValues(alpha: 0.3);
+        }
 
         return GestureDetector(
           onTap: () => vm.setSelectedDate(day),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
-                  : isToday
-                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                      : null,
+              color: backgroundColor,
               border: Border.all(
                 color: isToday
                     ? Theme.of(context).colorScheme.primary
@@ -151,50 +144,48 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Stack(
+              alignment: Alignment.center,
               children: [
-                // Background color for event days
-                if (hasEvent && eventsForDay.first.tagId != null)
-                  Positioned.fill(
+                // Selected day indicator - circular background behind number
+                if (isSelected)
+                  Positioned(
                     child: Container(
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: Color(vm.getTagById(eventsForDay.first.tagId)?.colorValue ?? 0)
-                            .withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
                       ),
                     ),
                   ),
-                // Day number and indicators
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${day.day}',
-                      style: TextStyle(
-                        color: isCurrentMonth
+                // Day number
+                Text(
+                  '${day.day}',
+                  style: TextStyle(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : isCurrentMonth
                             ? Theme.of(context).textTheme.bodyLarge?.color
                             : Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.3),
-                        fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
+                    fontSize: isSelected ? 16 : 14,
+                  ),
+                ),
+                // Event indicator - positioned at bottom center (only if no warning)
+                if (hasEvent && !hasWarning)
+                  Positioned(
+                    bottom: 4,
+                    child: Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: eventsForDay.first.tagId != null
+                            ? Color(vm.getTagById(eventsForDay.first.tagId)?.colorValue ?? 0)
+                            : Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    if (hasWarning)
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 12,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    if (hasEvent && !hasWarning)
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: eventsForDay.first.tagId != null
-                              ? Color(vm.getTagById(eventsForDay.first.tagId)?.colorValue ?? 0)
-                              : Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                  ],
-                ),
+                  ),
               ],
             ),
           ),

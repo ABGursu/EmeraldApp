@@ -261,7 +261,7 @@ class _ShoppingItemTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            // Checkbox or Edit button
+            // Checkbox or Actions menu for purchased items
             if (!isPurchased)
               Checkbox(
                 value: false,
@@ -273,14 +273,37 @@ class _ShoppingItemTile extends StatelessWidget {
                 ),
               )
             else
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20),
-                onPressed: () => _showEditPurchasedDialog(
-                  context,
-                  item,
-                  vm,
-                  balanceVm,
-                ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 20),
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    _showEditPurchasedDialog(context, item, vm, balanceVm);
+                  } else if (value == 'unpurchase') {
+                    await _handleUnpurchase(context, item, vm, balanceVm);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit Purchase'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'unpurchase',
+                    child: Row(
+                      children: [
+                        Icon(Icons.undo, size: 18),
+                        SizedBox(width: 8),
+                        Text('Unpurchase'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             // Note icon
             if (item.note != null && item.note!.isNotEmpty)
@@ -397,6 +420,82 @@ class _ShoppingItemTile extends StatelessWidget {
     );
   }
 
+  Future<void> _handleUnpurchase(
+    BuildContext context,
+    ShoppingItemModel item,
+    ShoppingViewModel vm,
+    BalanceViewModel balanceVm,
+  ) async {
+    // Show confirmation dialog for safety
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unpurchase Item'),
+        content: Text(
+          'This will move "${item.name}" back to your shopping list and remove the expense from your balance sheet. Continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (context.mounted) {
+                Navigator.pop(context, false);
+              }
+            },
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (context.mounted) {
+                Navigator.pop(context, true);
+              }
+            },
+            child: const Text('Unpurchase'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      // Store original values before unpurchasing (for potential error recovery)
+      final originalActualPrice = item.actualPrice;
+      final originalPurchaseDate = item.purchaseDate;
+      
+      try {
+        await vm.unpurchaseItem(item: item, balanceVm: balanceVm);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${item.name}" moved back to shopping list'),
+            ),
+          );
+        }
+      } catch (e) {
+        // Error recovery: Try to restore the purchase if unpurchase failed
+        if (context.mounted && originalActualPrice != null && originalPurchaseDate != null) {
+          try {
+            await vm.markAsPurchased(
+              item: item,
+              actualPrice: originalActualPrice,
+              purchaseDate: originalPurchaseDate,
+              balanceVm: balanceVm,
+            );
+          } catch (_) {
+            // If recovery also fails, just show error
+          }
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error unpurchasing item: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   void _showItemOptions(
     BuildContext context,
     ShoppingItemModel item,
@@ -436,11 +535,8 @@ class _ShoppingItemTile extends StatelessWidget {
                   if (context.mounted) {
                     Navigator.pop(context);
                   }
-                  await vm.unpurchaseItem(item: item, balanceVm: balanceVm);
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Item unpurchased')),
-                    );
+                    await _handleUnpurchase(context, item, vm, balanceVm);
                   }
                 },
               ),

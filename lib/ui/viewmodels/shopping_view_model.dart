@@ -197,12 +197,11 @@ class ShoppingViewModel extends ChangeNotifier {
     required ShoppingItemModel item,
     required BalanceViewModel balanceVm,
   }) async {
-    // Delete the linked transaction if it exists
-    if (item.linkedTransactionId != null) {
-      await balanceVm.deleteTransaction(item.linkedTransactionId!);
-    }
+    // Store transaction ID before clearing it (for deletion after FK is cleared)
+    final transactionIdToDelete = item.linkedTransactionId;
 
-    // Update shopping item
+    // IMPORTANT: First update shopping item to clear linked_transaction_id
+    // This must happen BEFORE deleting the transaction to avoid foreign key constraint violation
     final updatedItem = item.copyWith(
       isPurchased: false,
       actualPrice: null,
@@ -211,6 +210,12 @@ class ShoppingViewModel extends ChangeNotifier {
     );
 
     await _repository.updateItem(updatedItem);
+
+    // Now safe to delete the transaction (FK constraint is cleared)
+    if (transactionIdToDelete != null) {
+      await balanceVm.deleteTransaction(transactionIdToDelete);
+    }
+
     await loadItems();
   }
 
