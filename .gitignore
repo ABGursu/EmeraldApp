@@ -48,3 +48,5 @@ DATA_OUTPUT_EXAMPLES.md
 *.json
 *.json
 google-services.json
+google-services.json
+*.json
