@@ -2,22 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data/local_db/database_helper.dart';
-import 'ui/screens/balance/balance_screen.dart';
-import 'ui/screens/backup/backup_settings_screen.dart';
-import 'ui/screens/calendar/calendar_hub_screen.dart';
-import 'ui/screens/exercise/exercise_log_screen.dart';
-import 'ui/screens/habit/habit_hub_screen.dart';
-import 'ui/screens/shopping/shopping_list_screen.dart';
-import 'ui/screens/supplement/supplement_hub_screen.dart';
+import 'data/models/home_menu_item.dart';
 import 'data/repositories/sql_balance_repository.dart';
 import 'ui/providers/date_provider.dart';
 import 'ui/viewmodels/balance_view_model.dart';
+import 'ui/viewmodels/bio_mechanic_view_model.dart';
 import 'ui/viewmodels/calendar_view_model.dart';
 import 'ui/viewmodels/daily_log_view_model.dart';
 import 'ui/viewmodels/exercise_library_view_model.dart';
 import 'ui/viewmodels/habit_view_model.dart';
 import 'ui/viewmodels/shopping_view_model.dart';
 import 'ui/viewmodels/supplement_view_model.dart';
+import 'ui/viewmodels/home_layout_view_model.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +58,12 @@ class EmeraldApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => CalendarViewModel()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => BioMechanicViewModel()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HomeLayoutViewModel()..init(),
         ),
       ],
       child: MaterialApp(
@@ -122,100 +124,48 @@ class MainMenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final modules = [
-      _ModuleInfo(
-        title: 'Balance Sheet',
-        icon: Icons.account_balance_wallet,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const BalanceScreen()),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Exercise Logger',
-        icon: Icons.fitness_center,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const ExerciseLogScreen(),
-            ),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Supplement Logger',
-        icon: Icons.medication_outlined,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const SupplementHubScreen(),
-            ),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Habit Logger',
-        icon: Icons.track_changes,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const HabitHubScreen(),
-            ),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Shopping List',
-        icon: Icons.shopping_cart_outlined,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const ShoppingListScreen(),
-            ),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Calendar & Diary',
-        icon: Icons.calendar_today,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const CalendarHubScreen(),
-            ),
-          );
-        },
-      ),
-      _ModuleInfo(
-        title: 'Backup & Restore',
-        icon: Icons.backup,
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const BackupSettingsScreen(),
-            ),
-          );
-        },
-      ),
-    ];
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('EmeraldApp'),
         centerTitle: true,
       ),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.0, // Kare butonlar için 1.0
-        ),
-        itemCount: modules.length,
-        itemBuilder: (context, index) {
-          return _buildModuleButton(context, modules[index]);
+      body: Consumer<HomeLayoutViewModel>(
+        builder: (context, vm, child) {
+          // Wait for initialization
+          if (!vm.isInitialized) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          // Get visible items in current order
+          final visibleItems = vm.getVisibleItems();
+
+          if (visibleItems.isEmpty) {
+            return const Center(
+              child: Text('No menu items available'),
+            );
+          }
+
+          return SafeArea(
+            child: GridView.builder(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewPadding.bottom + 16,
+              ),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.0, // Square buttons
+              ),
+              itemCount: visibleItems.length,
+              itemBuilder: (context, index) {
+                final item = visibleItems[index];
+                return _buildModuleButton(context, item);
+              },
+            ),
+          );
         },
       ),
     );
@@ -223,14 +173,18 @@ class MainMenuScreen extends StatelessWidget {
 
   Widget _buildModuleButton(
     BuildContext context,
-    _ModuleInfo module,
+    HomeMenuItem item,
   ) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 4,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: module.onTap,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => item.buildScreen()),
+          );
+        },
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -251,15 +205,15 @@ class MainMenuScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                module.icon,
+                item.icon,
                 size: 40,
-                color: Theme.of(context).colorScheme.primary,
+                color: item.color,
               ),
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Text(
-                  module.title,
+                  item.title,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -274,16 +228,4 @@ class MainMenuScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ModuleInfo {
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  _ModuleInfo({
-    required this.title,
-    required this.icon,
-    required this.onTap,
-  });
 }

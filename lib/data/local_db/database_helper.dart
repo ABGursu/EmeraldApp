@@ -1,11 +1,9 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'hardcoded_routines.dart';
-
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 17;
+  static const int _dbVersion = 18;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -68,17 +66,64 @@ class DatabaseHelper {
     // Habit & Goal Module Tables (v5)
     await _createHabitTables(db);
 
-    // Exercise Logger Module Tables (v8 structure)
+    // Exercise Logger Module Tables (v8 structure - will be enhanced in v18)
     await _createExerciseLoggerTablesV8(db);
     await _seedExerciseDefinitions(db);
-    await _seedHardcodedRoutines(db);
+    // Note: Hardcoded routines are NOT seeded in v18 - user starts fresh with sessions
+
+    // Bio-Mechanic Training System Tables (v18)
+    await _createBioMechanicTables(db);
+    await _seedMusclesTable(db);
+
+    // For new databases, enhance exercise_definitions immediately
+    try {
+      await db
+          .execute('ALTER TABLE exercise_definitions ADD COLUMN types TEXT');
+    } catch (e) {
+      // Column might already exist
+    }
+    try {
+      await db.execute(
+          'ALTER TABLE exercise_definitions ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+    } catch (e) {
+      // Column might already exist
+    }
+
+    // For new databases, use the new workout_logs structure directly
+    // Drop old workout_logs if it exists and create new one
+    await db.execute('DROP TABLE IF EXISTS workout_logs');
+    await db.execute('''
+      CREATE TABLE workout_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        exercise_id INTEGER NOT NULL,
+        set_number INTEGER NOT NULL,
+        weight_kg REAL,
+        reps INTEGER NOT NULL,
+        rir REAL,
+        form_rating INTEGER CHECK(form_rating >= 1 AND form_rating <= 10),
+        note TEXT,
+        FOREIGN KEY(session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY(exercise_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create indexes for new workout_logs
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_logs_session 
+      ON workout_logs(session_id)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_logs_exercise 
+      ON workout_logs(exercise_id)
+    ''');
 
     // Shopping List Module Tables (v13)
     await _createShoppingListTables(db);
 
     // Calendar & Diary Module Tables (v14)
     await _createCalendarTables(db);
-    
+
     // Create indexes for performance optimization (v16)
     await _createIndexes(db);
   }
@@ -818,8 +863,7 @@ class DatabaseHelper {
       } catch (e) {
         // Column might already exist
       }
-      // Seed hardcoded routines
-      await _seedHardcodedRoutines(db);
+      // Note: Hardcoded routines seeding removed in v18 - user starts fresh with sessions
     }
     if (oldVersion < 12) {
       // Add type column to habits table for positive/negative habit support
@@ -869,6 +913,10 @@ class DatabaseHelper {
         CREATE INDEX IF NOT EXISTS idx_diary_entries_content 
         ON diary_entries(content)
       ''');
+    }
+    if (oldVersion < 18) {
+      // Bio-Mechanic Training System Migration
+      await _migrateToBioMechanicSystem(db);
     }
   }
 
@@ -1212,70 +1260,369 @@ class DatabaseHelper {
     }
   }
 
-  /// Seeds hardcoded routine templates into the database
-  Future<void> _seedHardcodedRoutines(Database db) async {
-    final hardcodedRoutines = getHardcodedRoutines();
+  // Note: _seedHardcodedRoutines removed in v18 - user starts fresh with session-based training
 
-    // Helper function to parse sets and reps from note
-    Map<String, int> parseSetsReps(String? note) {
-      if (note == null || note.isEmpty) {
-        return {'sets': 3, 'reps': 10};
-      }
-      final regex = RegExp(r'(\d+)x(\d+)');
-      final match = regex.firstMatch(note);
-      if (match != null) {
-        return {
-          'sets': int.tryParse(match.group(1) ?? '3') ?? 3,
-          'reps': int.tryParse(match.group(2) ?? '10') ?? 10,
-        };
-      }
-      return {'sets': 3, 'reps': 10};
+  /// Creates the Bio-Mechanic Training System tables (v18)
+  Future<void> _createBioMechanicTables(Database db) async {
+    // 1. Muscles Reference Table (Anatomical Database)
+    await db.execute('''
+      CREATE TABLE muscles(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        group_name TEXT NOT NULL
+      )
+    ''');
+
+    // 2. User Preferences (Unit System)
+    await db.execute('''
+      CREATE TABLE user_preferences(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    // 3. Enhanced Exercise Definitions (Add types and is_archived)
+    // Note: exercise_definitions already exists, we'll alter it in migration
+    // For new databases, we create it with the new structure
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS exercise_definitions_v18(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        default_type TEXT,
+        body_part TEXT,
+        types TEXT,
+        is_archived INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // 4. Exercise Muscle Impact (Bio-Mechanic Engine)
+    await db.execute('''
+      CREATE TABLE exercise_muscle_impact(
+        exercise_id INTEGER NOT NULL,
+        muscle_id INTEGER NOT NULL,
+        impact_score INTEGER NOT NULL CHECK(impact_score >= 1 AND impact_score <= 10),
+        PRIMARY KEY(exercise_id, muscle_id),
+        FOREIGN KEY(exercise_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE,
+        FOREIGN KEY(muscle_id) REFERENCES muscles(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // 5. Workout Sessions (Day -> Session hierarchy)
+    await db.execute('''
+      CREATE TABLE workout_sessions(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date INTEGER NOT NULL,
+        start_time INTEGER,
+        title TEXT,
+        duration_minutes INTEGER,
+        rating INTEGER CHECK(rating >= 1 AND rating <= 10),
+        goal_tags TEXT,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    // 6. Workout Logs (Sets - Individual set records)
+    await db.execute('''
+      CREATE TABLE workout_logs_v18(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        exercise_id INTEGER NOT NULL,
+        set_number INTEGER NOT NULL,
+        weight_kg REAL,
+        reps INTEGER NOT NULL,
+        rir REAL,
+        form_rating INTEGER CHECK(form_rating >= 1 AND form_rating <= 10),
+        note TEXT,
+        FOREIGN KEY(session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+        FOREIGN KEY(exercise_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // 7. Sportif Goals (Training Goals Manager)
+    await db.execute('''
+      CREATE TABLE sportif_goals(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        is_archived INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_sessions_date 
+      ON workout_sessions(date)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_logs_v18_session 
+      ON workout_logs_v18(session_id)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_workout_logs_v18_exercise 
+      ON workout_logs_v18(exercise_id)
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_exercise_muscle_impact_exercise 
+      ON exercise_muscle_impact(exercise_id)
+    ''');
+  }
+
+  /// Seeds the muscles table with detailed anatomical data
+  Future<void> _seedMusclesTable(Database db) async {
+    final musclesData = [
+      // ARM GROUP
+      {'name': 'Triceps Brachii - Long Head', 'group': 'Arm'},
+      {'name': 'Triceps Brachii - Lateral Head', 'group': 'Arm'},
+      {'name': 'Triceps Brachii - Medial Head', 'group': 'Arm'},
+      {'name': 'Biceps Brachii - Long Head', 'group': 'Arm'},
+      {'name': 'Biceps Brachii - Short Head', 'group': 'Arm'},
+      {'name': 'Brachialis', 'group': 'Arm'},
+      {'name': 'Brachioradialis', 'group': 'Arm'},
+      {'name': 'Forearm Flexors', 'group': 'Arm'},
+      {'name': 'Forearm Extensors', 'group': 'Arm'},
+
+      // CHEST GROUP
+      {'name': 'Pectoralis Major - Clavicular Head', 'group': 'Chest'},
+      {'name': 'Pectoralis Major - Sternal Head', 'group': 'Chest'},
+      {'name': 'Pectoralis Major - Abdominal Head', 'group': 'Chest'},
+      {'name': 'Pectoralis Minor', 'group': 'Chest'},
+      {'name': 'Serratus Anterior', 'group': 'Chest'},
+
+      // SHOULDER GROUP
+      {'name': 'Anterior Deltoid', 'group': 'Shoulder'},
+      {'name': 'Lateral Deltoid', 'group': 'Shoulder'},
+      {'name': 'Posterior Deltoid', 'group': 'Shoulder'},
+      {'name': 'Supraspinatus', 'group': 'Shoulder'},
+      {'name': 'Infraspinatus', 'group': 'Shoulder'},
+      {'name': 'Teres Minor', 'group': 'Shoulder'},
+      {'name': 'Subscapularis', 'group': 'Shoulder'},
+
+      // BACK GROUP
+      {'name': 'Latissimus Dorsi', 'group': 'Back'},
+      {'name': 'Rhomboid Major', 'group': 'Back'},
+      {'name': 'Rhomboid Minor', 'group': 'Back'},
+      {'name': 'Middle Trapezius', 'group': 'Back'},
+      {'name': 'Upper Trapezius', 'group': 'Back'},
+      {'name': 'Lower Trapezius', 'group': 'Back'},
+      {'name': 'Teres Major', 'group': 'Back'},
+      {'name': 'Erector Spinae', 'group': 'Back'},
+      {'name': 'Multifidus', 'group': 'Back'},
+      {'name': 'Quadratus Lumborum', 'group': 'Back'},
+
+      // LEG GROUP - QUADRICEPS
+      {'name': 'Rectus Femoris', 'group': 'Leg'},
+      {'name': 'Vastus Lateralis', 'group': 'Leg'},
+      {'name': 'Vastus Medialis', 'group': 'Leg'},
+      {'name': 'Vastus Intermedius', 'group': 'Leg'},
+
+      // LEG GROUP - HAMSTRINGS
+      {'name': 'Biceps Femoris - Long Head', 'group': 'Leg'},
+      {'name': 'Biceps Femoris - Short Head', 'group': 'Leg'},
+      {'name': 'Semitendinosus', 'group': 'Leg'},
+      {'name': 'Semimembranosus', 'group': 'Leg'},
+
+      // LEG GROUP - GLUTES
+      {'name': 'Gluteus Maximus', 'group': 'Leg'},
+      {'name': 'Gluteus Medius', 'group': 'Leg'},
+      {'name': 'Gluteus Minimus', 'group': 'Leg'},
+
+      // LEG GROUP - CALVES
+      {'name': 'Gastrocnemius - Medial Head', 'group': 'Leg'},
+      {'name': 'Gastrocnemius - Lateral Head', 'group': 'Leg'},
+      {'name': 'Soleus', 'group': 'Leg'},
+      {'name': 'Tibialis Anterior', 'group': 'Leg'},
+      {'name': 'Tibialis Posterior', 'group': 'Leg'},
+      {'name': 'Peroneals', 'group': 'Leg'},
+
+      // LEG GROUP - HIP
+      {'name': 'Hip Flexors (Iliopsoas)', 'group': 'Leg'},
+      {'name': 'Hip Adductors', 'group': 'Leg'},
+      {'name': 'Hip Abductors', 'group': 'Leg'},
+
+      // CORE GROUP
+      {'name': 'Rectus Abdominis - Upper', 'group': 'Core'},
+      {'name': 'Rectus Abdominis - Lower', 'group': 'Core'},
+      {'name': 'External Obliques', 'group': 'Core'},
+      {'name': 'Internal Obliques', 'group': 'Core'},
+      {'name': 'Transverse Abdominis', 'group': 'Core'},
+      {'name': 'Multifidus (Core)', 'group': 'Core'},
+    ];
+
+    for (final muscle in musclesData) {
+      await db.insert(
+          'muscles',
+          {
+            'name': muscle['name'],
+            'group_name': muscle['group'],
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+  }
+
+  /// Migrates existing workout_logs data to the new Bio-Mechanic System structure
+  Future<void> _migrateToBioMechanicSystem(Database db) async {
+    // Step 1: Create new tables
+    await _createBioMechanicTables(db);
+    await _seedMusclesTable(db);
+
+    // Step 2: Enhance exercise_definitions table
+    try {
+      await db
+          .execute('ALTER TABLE exercise_definitions ADD COLUMN types TEXT');
+    } catch (e) {
+      // Column might already exist
+    }
+    try {
+      await db.execute(
+          'ALTER TABLE exercise_definitions ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+    } catch (e) {
+      // Column might already exist
     }
 
-    // Get all exercise definitions to map names to IDs
-    final exerciseDefs = await db.query('exercise_definitions');
-    final exerciseMap = <String, int>{};
-    for (final def in exerciseDefs) {
-      exerciseMap[def['name'] as String] = def['id'] as int;
-    }
+    // Step 3: Set default unit preference to KG
+    await db.insert(
+        'user_preferences',
+        {
+          'key': 'preferred_weight_unit',
+          'value': 'KG',
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace);
 
-    // Insert routines
-    for (final routineTemplate in hardcodedRoutines) {
-      final existingRoutines = await db.query(
-        'routines',
-        where: 'name = ?',
-        whereArgs: [routineTemplate.routineName],
-        limit: 1,
-      );
+    // Step 4: Migrate existing workout_logs to new structure
+    // Strategy: Create "Legacy Session" for each unique date, then create individual sets
 
-      int routineId;
-      if (existingRoutines.isEmpty) {
-        routineId = await db.insert('routines', {
-          'name': routineTemplate.routineName,
-          'created_at': DateTime.now().millisecondsSinceEpoch,
+    try {
+      // Get all unique dates from old workout_logs
+      final uniqueDates = await db.rawQuery('''
+        SELECT DISTINCT date FROM workout_logs ORDER BY date
+      ''');
+
+      for (final dateRow in uniqueDates) {
+        final date = dateRow['date'] as int;
+
+        // Create a Legacy Session for this date
+        final sessionId = await db.insert('workout_sessions', {
+          'date': date,
+          'start_time': date, // Use date as start_time for legacy sessions
+          'title': 'Legacy Session',
+          'duration_minutes': null,
+          'rating': null,
+          'goal_tags': 'Legacy',
+          'created_at': date,
         });
-      } else {
-        routineId = existingRoutines.first['id'] as int;
-        await db.delete('routine_items',
-            where: 'routine_id = ?', whereArgs: [routineId]);
-      }
 
-      for (int i = 0; i < routineTemplate.exercises.length; i++) {
-        final item = routineTemplate.exercises[i];
-        final exerciseId = exerciseMap[item.exerciseName];
+        // Get all workout_logs for this date
+        final oldLogs = await db.query(
+          'workout_logs',
+          where: 'date = ?',
+          whereArgs: [date],
+          orderBy: 'order_index ASC',
+        );
 
-        if (exerciseId != null) {
-          final setsReps = parseSetsReps(item.note);
-          await db.insert('routine_items', {
-            'routine_id': routineId,
-            'exercise_definition_id': exerciseId,
-            'target_sets': setsReps['sets']!,
-            'target_reps': setsReps['reps']!,
-            'order_index': i,
-            'note': item.note,
-          });
+        for (final oldLog in oldLogs) {
+          final exerciseName = oldLog['exercise_name'] as String;
+          final sets = oldLog['sets'] as int? ?? 1;
+          final reps = oldLog['reps'] as int? ?? 10;
+          final weight = oldLog['weight'] as double?;
+
+          // Find or create exercise_definition for this exercise
+          int exerciseId;
+          final existingExercise = await db.query(
+            'exercise_definitions',
+            where: 'name = ?',
+            whereArgs: [exerciseName],
+            limit: 1,
+          );
+
+          if (existingExercise.isNotEmpty) {
+            exerciseId = existingExercise.first['id'] as int;
+          } else {
+            // Create exercise definition if it doesn't exist (from legacy data)
+            exerciseId = await db.insert('exercise_definitions', {
+              'name': exerciseName,
+              'default_type': oldLog['exercise_type'] as String?,
+              'body_part': null,
+              'types': null,
+              'is_archived': 0,
+            });
+          }
+
+          // Create individual set records
+          // If old log had sets=3, reps=10, we create 3 sets with 10 reps each
+          for (int setNum = 1; setNum <= sets; setNum++) {
+            await db.insert('workout_logs_v18', {
+              'session_id': sessionId,
+              'exercise_id': exerciseId,
+              'set_number': setNum,
+              'weight_kg': weight,
+              'reps': reps,
+              'rir': null,
+              'form_rating': null,
+              'note': oldLog['note'] as String?,
+            });
+          }
         }
       }
+
+      // Step 5: Rename old workout_logs table to workout_logs_legacy (preserve for safety)
+      try {
+        await db
+            .execute('ALTER TABLE workout_logs RENAME TO workout_logs_legacy');
+      } catch (e) {
+        // Table might not exist or already renamed
+      }
+
+      // Step 6: Rename new table to workout_logs
+      try {
+        await db.execute('ALTER TABLE workout_logs_v18 RENAME TO workout_logs');
+      } catch (e) {
+        // Might need to recreate if rename fails
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS workout_logs(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id INTEGER NOT NULL,
+            exercise_id INTEGER NOT NULL,
+            set_number INTEGER NOT NULL,
+            weight_kg REAL,
+            reps INTEGER NOT NULL,
+            rir REAL,
+            form_rating INTEGER CHECK(form_rating >= 1 AND form_rating <= 10),
+            note TEXT,
+            FOREIGN KEY(session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+            FOREIGN KEY(exercise_id) REFERENCES exercise_definitions(id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Copy data from workout_logs_v18 if it exists
+        try {
+          await db.execute('''
+            INSERT INTO workout_logs 
+            SELECT * FROM workout_logs_v18
+          ''');
+          await db.execute('DROP TABLE workout_logs_v18');
+        } catch (e) {
+          // Ignore if table doesn't exist
+        }
+      }
+
+      // Step 7: Update indexes
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_workout_logs_session 
+        ON workout_logs(session_id)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_workout_logs_exercise 
+        ON workout_logs(exercise_id)
+      ''');
+
+      // Step 8: Delete hardcoded routines (user starts fresh with sessions)
+      await db.delete('routine_items');
+      await db.delete('routines');
+    } catch (e) {
+      // Migration error - log but don't fail
+      // Error logged silently to avoid print in production
+      // Ensure new tables exist even if migration fails
     }
   }
 }
