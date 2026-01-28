@@ -67,7 +67,7 @@ class ExerciseLog {
     );
   }
 
-  /// Özel text çıktısı: "[dd.MM.yyyy HH:mm], [Hareket Tipi] [Hareket Adı] [Set]x[Tekrar] [Ağırlık]"
+  /// Custom text output: "[dd.MM.yyyy HH:mm], [Movement Type] [Movement Name] [Sets]x[Reps] [Weight]"
   String toLogString() {
     final dateStr = formatDateTime(date);
     final typeStr = movementType != null ? '$movementType ' : '';
@@ -75,4 +75,3 @@ class ExerciseLog {
     return '$dateStr, $typeStr$movementName ${sets}x$reps$weightStr';
   }
 }
-

@@ -44,61 +44,63 @@ class SupplementHubScreen extends StatelessWidget {
                 Expanded(
                   child: Builder(
                     builder: (context) {
-                      final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+                      final bottomPadding =
+                          MediaQuery.of(context).viewPadding.bottom;
                       return GridView.count(
                         crossAxisCount: 2,
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
                         padding: EdgeInsets.only(bottom: bottomPadding),
-                    children: [
-                      _buildActionCard(
-                        context,
-                        title: 'Log Supplement',
-                        subtitle: 'Record intake',
-                        icon: Icons.add_circle_outline,
-                        color: Theme.of(context).colorScheme.primary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SupplementLoggerScreen(),
+                        children: [
+                          _buildActionCard(
+                            context,
+                            title: 'Log Supplement',
+                            subtitle: 'Record intake',
+                            icon: Icons.add_circle_outline,
+                            color: Theme.of(context).colorScheme.primary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SupplementLoggerScreen(),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: 'My Products',
-                        subtitle: '${vm.products.length} products',
-                        icon: Icons.inventory_2_outlined,
-                        color: Theme.of(context).colorScheme.secondary,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ProductManagerScreen(),
+                          _buildActionCard(
+                            context,
+                            title: 'My Products',
+                            subtitle: '${vm.products.length} products',
+                            icon: Icons.inventory_2_outlined,
+                            color: Theme.of(context).colorScheme.secondary,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProductManagerScreen(),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: 'Analytics',
-                        subtitle: "Today's totals",
-                        icon: Icons.analytics_outlined,
-                        color: Colors.teal,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SupplementAnalyticsScreen(),
+                          _buildActionCard(
+                            context,
+                            title: 'Analytics',
+                            subtitle: "Today's totals",
+                            icon: Icons.analytics_outlined,
+                            color: Colors.teal,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const SupplementAnalyticsScreen(),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      _buildActionCard(
-                        context,
-                        title: 'History',
-                        subtitle: '${vm.logs.length} entries',
-                        icon: Icons.history,
-                        color: Colors.orange,
-                        onTap: () => _showHistoryBottomSheet(context, vm),
-                      ),
-                    ],
+                          _buildActionCard(
+                            context,
+                            title: 'History',
+                            subtitle: '${vm.logs.length} entries',
+                            icon: Icons.history,
+                            color: Colors.orange,
+                            onTap: () => _showHistoryBottomSheet(context, vm),
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -172,11 +174,13 @@ class SupplementHubScreen extends StatelessWidget {
                         ),
                         Text(
                           '${_formatAmount(entry.value.amount)} ${entry.value.unit}',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                       ],
                     ),
@@ -350,7 +354,8 @@ class SupplementHubScreen extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
@@ -442,7 +447,7 @@ class SupplementHubScreen extends StatelessWidget {
 
   void _showExportDialog(BuildContext mainContext) {
     final vm = mainContext.read<SupplementViewModel>();
-    
+
     showDialog(
       context: mainContext,
       builder: (dialogContext) => AlertDialog(
@@ -458,10 +463,10 @@ class SupplementHubScreen extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               Navigator.of(dialogContext).pop();
-              
+
               // Use main context for date picker
               if (!mainContext.mounted) return;
-              
+
               // Show date range picker
               final range = await showDateRangePicker(
                 context: mainContext,
@@ -474,12 +479,12 @@ class SupplementHubScreen extends StatelessWidget {
                       )
                     : null,
               );
-              
+
               if (range == null) return;
-              
+
               // Check context again after date picker
               if (!mainContext.mounted) return;
-              
+
               // Show loading indicator
               showDialog(
                 context: mainContext,
@@ -500,7 +505,7 @@ class SupplementHubScreen extends StatelessWidget {
                   ),
                 ),
               );
-              
+
               try {
                 final path = await vm.exportLogs(
                   from: range.start,
@@ -510,17 +515,17 @@ class SupplementHubScreen extends StatelessWidget {
                     seconds: 59,
                   )), // inclusive end
                 );
-                
+
                 if (!mainContext.mounted) return;
                 Navigator.of(mainContext).pop(); // Close loading dialog
-                
+
                 if (mainContext.mounted) {
                   ScaffoldMessenger.of(mainContext).showSnackBar(
                     SnackBar(
-                      content: Text('Export başarılı!\nDosya: $path'),
+                      content: Text('Export successful!\nFile: $path'),
                       duration: const Duration(seconds: 5),
                       action: SnackBarAction(
-                        label: 'Tamam',
+                        label: 'OK',
                         onPressed: () {},
                       ),
                     ),
@@ -529,27 +534,29 @@ class SupplementHubScreen extends StatelessWidget {
               } catch (e) {
                 if (!mainContext.mounted) return;
                 Navigator.of(mainContext).pop(); // Close loading dialog
-                
+
                 if (mainContext.mounted) {
-                  String errorMessage = 'Export başarısız: ';
-                  if (e.toString().contains('Permission') || 
+                  String errorMessage = 'Export failed: ';
+                  if (e.toString().contains('Permission') ||
                       e.toString().contains('permission') ||
                       e.toString().contains('denied')) {
-                    errorMessage += 'Depolama izni gerekli. Lütfen ayarlardan izin verin.';
+                    errorMessage +=
+                        'Storage permission is required. Please enable it in settings.';
                   } else if (e.toString().contains('No such file') ||
-                             e.toString().contains('Directory')) {
-                    errorMessage += 'Dizin oluşturulamadı. Fallback dizin kullanılıyor.';
+                      e.toString().contains('Directory')) {
+                    errorMessage +=
+                        'Could not create directory. Using fallback directory.';
                   } else {
                     errorMessage += e.toString();
                   }
-                  
+
                   ScaffoldMessenger.of(mainContext).showSnackBar(
                     SnackBar(
                       content: Text(errorMessage),
                       backgroundColor: Colors.red,
                       duration: const Duration(seconds: 6),
                       action: SnackBarAction(
-                        label: 'Tamam',
+                        label: 'OK',
                         onPressed: () {},
                       ),
                     ),
@@ -564,4 +571,3 @@ class SupplementHubScreen extends StatelessWidget {
     );
   }
 }
-

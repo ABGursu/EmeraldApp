@@ -1,6 +1,8 @@
 import '../models/exercise_definition_model.dart';
 import '../models/exercise_muscle_impact_model.dart';
 import '../models/muscle_model.dart';
+import '../models/routine_model.dart';
+import '../models/routine_item_model.dart';
 import '../models/sportif_goal_model.dart';
 import '../models/workout_session_model.dart';
 import '../models/workout_set_model.dart';
@@ -14,7 +16,8 @@ abstract class IBioMechanicRepository {
   Future<MuscleModel?> getMuscleByName(String name);
 
   // === Exercise Definitions (Enhanced) ===
-  Future<List<ExerciseDefinition>> getAllExerciseDefinitions({bool includeArchived = false});
+  Future<List<ExerciseDefinition>> getAllExerciseDefinitions(
+      {bool includeArchived = false});
   Future<ExerciseDefinition?> getExerciseDefinitionById(int id);
   Future<ExerciseDefinition?> getExerciseDefinitionByName(String name);
   Future<int> createExerciseDefinition(ExerciseDefinition definition);
@@ -23,13 +26,26 @@ abstract class IBioMechanicRepository {
   Future<int> archiveExerciseDefinition(int id);
 
   // === Exercise Muscle Impact (Bio-Mechanic Engine) ===
-  Future<List<ExerciseMuscleImpactModel>> getMuscleImpactsForExercise(int exerciseId);
+  Future<List<ExerciseMuscleImpactModel>> getMuscleImpactsForExercise(
+      int exerciseId);
   Future<List<ExerciseMuscleImpactModel>> getExercisesForMuscle(int muscleId);
   Future<void> setExerciseMuscleImpacts(
     int exerciseId,
     List<ExerciseMuscleImpactModel> impacts,
   );
   Future<void> deleteExerciseMuscleImpacts(int exerciseId);
+
+  // === Routines ===
+  Future<List<Routine>> getAllRoutines();
+  Future<Routine?> getRoutineById(int id);
+  Future<List<RoutineItem>> getItemsByRoutineId(int routineId);
+  Future<int> createRoutine(Routine routine);
+  Future<void> updateRoutine(Routine routine);
+  Future<void> deleteRoutine(int id);
+  Future<int> createRoutineItem(RoutineItem item);
+  Future<void> updateRoutineItem(RoutineItem item);
+  Future<void> deleteRoutineItem(int id);
+  Future<void> reorderRoutineItems(int routineId, List<int> itemIdsInOrder);
 
   // === Workout Sessions ===
   Future<List<WorkoutSessionModel>> getSessionsByDate(DateTime date);
@@ -70,7 +86,8 @@ abstract class IBioMechanicRepository {
   Future<ExerciseDefinitionWithImpacts?> getExerciseWithImpacts(int exerciseId);
 
   /// Get all exercises that target a specific muscle (with impact scores)
-  Future<List<ExerciseWithImpact>> getExercisesForMuscleWithScores(int muscleId);
+  Future<List<ExerciseWithImpact>> getExercisesForMuscleWithScores(
+      int muscleId);
 
   /// Calculate progressive overload data for an exercise
   Future<List<ProgressiveOverloadData>> getProgressiveOverloadData({
@@ -105,7 +122,8 @@ class ExerciseWithImpact {
 /// Progressive overload calculation data point
 class ProgressiveOverloadData {
   final DateTime date;
-  final double effectiveScore; // Calculated: (Volume * Intensity Factor * Quality Factor)
+  final double
+      effectiveScore; // Calculated: (Volume * Intensity Factor * Quality Factor)
   final double totalVolume; // Sum of (weight_kg * reps) for all sets
   final double avgRir; // Average RIR (lower = higher intensity)
   final double avgFormRating; // Average form rating
@@ -118,4 +136,3 @@ class ProgressiveOverloadData {
     required this.avgFormRating,
   });
 }
-

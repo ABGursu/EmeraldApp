@@ -22,14 +22,15 @@ class RoutineItemTemplate {
 List<RoutineTemplate> getHardcodedRoutines() {
   return [
     // ---------------------------------------------------------
-    // 1. CLASSIC SPLIT (Pazartesi - Cumartesi)
+    // 1. CLASSIC SPLIT (Monday - Saturday)
     // ---------------------------------------------------------
     RoutineTemplate(
       category: 'Classic Split',
-      routineName: 'Pazartesi - Bacak (Legs)',
+      routineName: 'Monday - Legs',
       exercises: [
         RoutineItemTemplate('Cossack Squats', note: '3x10 + 1x12 (Both Legs)'),
-        RoutineItemTemplate('Bulgarian Split Squats', note: '3x10 + 1x12 (Both Legs)'),
+        RoutineItemTemplate('Bulgarian Split Squats',
+            note: '3x10 + 1x12 (Both Legs)'),
         RoutineItemTemplate('Shrimp Squats', note: '4xMax'),
         RoutineItemTemplate('Deep Squats', note: '3x15 + 1x20'),
         RoutineItemTemplate('Feet Elevated Leg Curls', note: '4x20'),
@@ -43,12 +44,13 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Classic Split',
-      routineName: 'Salı - Sırt & Biceps (Back/Biceps)',
+      routineName: 'Tuesday - Back & Biceps',
       exercises: [
         RoutineItemTemplate('Scapular Pull Ups', note: '2xMax'),
         RoutineItemTemplate('Chinups', note: '3xMax'),
         RoutineItemTemplate('Neutral Grip Pullups', note: '3xMax'),
-        RoutineItemTemplate('Chest Supported Dumbbell Row', note: '2x8 (15 Degrees)'),
+        RoutineItemTemplate('Chest Supported Dumbbell Row',
+            note: '2x8 (15 Degrees)'),
         RoutineItemTemplate('Knee to Bench Dumbell Row', note: '2x8'),
         RoutineItemTemplate('Wide Grip Australian Pullups', note: '3x8'),
         RoutineItemTemplate('One Towel Pullups', note: '2xMax'),
@@ -61,7 +63,7 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Classic Split',
-      routineName: 'Çarşamba - Göğüs & Triceps (Chest/Tri)',
+      routineName: 'Wednesday - Chest & Triceps',
       exercises: [
         RoutineItemTemplate('Scapular Pushups', note: '2x15'),
         RoutineItemTemplate('Dips', note: '5xMax'),
@@ -77,7 +79,7 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Classic Split',
-      routineName: 'Cuma - Core Day',
+      routineName: 'Friday - Core Day',
       exercises: [
         RoutineItemTemplate('Leg Raises', note: '4x20'),
         RoutineItemTemplate('Crunches', note: '4x20'),
@@ -92,11 +94,12 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Classic Split',
-      routineName: 'Cumartesi - Omuz & Kol 2',
+      routineName: 'Saturday - Shoulder & Arms 2',
       exercises: [
         RoutineItemTemplate('Military Press', note: '4x8'),
         RoutineItemTemplate('Dumbbell Shoulder Press', note: '4x12'),
-        RoutineItemTemplate('Dumbbell Lateral Raise', note: 'Drop Set: 5kgx12 -> 7.5x10 -> 10x8 -> 5xmax'),
+        RoutineItemTemplate('Dumbbell Lateral Raise',
+            note: 'Drop Set: 5kgx12 -> 7.5x10 -> 10x8 -> 5xmax'),
         RoutineItemTemplate('Bentover Lateral Raise', note: '3x12'),
         RoutineItemTemplate('Cable Face Pull', note: '4x12'),
         RoutineItemTemplate('Z Bar Upright Row', note: '5x12'),
@@ -168,16 +171,20 @@ List<RoutineTemplate> getHardcodedRoutines() {
       category: 'Conditioning',
       routineName: 'Cali Fullbody Circuit',
       exercises: [
-        RoutineItemTemplate('Resistance Band Pulls for Lats', note: '3x12 (Section A)'),
+        RoutineItemTemplate('Resistance Band Pulls for Lats',
+            note: '3x12 (Section A)'),
         RoutineItemTemplate('Bulgarian Split Squats', note: '3x12 (Section A)'),
-        RoutineItemTemplate('Feet Elevated Bench Dips', note: '3x15 (Section B)'),
+        RoutineItemTemplate('Feet Elevated Bench Dips',
+            note: '3x15 (Section B)'),
         RoutineItemTemplate('Hip Thrusts', note: '3x50 (Section B)'),
         RoutineItemTemplate('Resistance Band Rows', note: '3x12 (Section C)'),
         RoutineItemTemplate('Diamond Pushups', note: '3x12 (Section C)'),
         RoutineItemTemplate('Plank', note: '3xMax (Section D)'),
         RoutineItemTemplate('Windshield Wipers', note: '3x15 (Section D)'),
-        RoutineItemTemplate('Reverse Hyperextensions', note: '3x15 (Section D)'),
-        RoutineItemTemplate('Resistance Band Lateral Raises', note: '1x12 (Section E)'),
+        RoutineItemTemplate('Reverse Hyperextensions',
+            note: '3x15 (Section D)'),
+        RoutineItemTemplate('Resistance Band Lateral Raises',
+            note: '1x12 (Section E)'),
         RoutineItemTemplate('Banded Upright Row', note: '1x12 (Section E)'),
         RoutineItemTemplate('Handstand Hold', note: '1xMax (Section E)'),
         RoutineItemTemplate('Grip Work', note: '1x50 + Hold'),
@@ -195,7 +202,8 @@ List<RoutineTemplate> getHardcodedRoutines() {
         RoutineItemTemplate('Dumbbell Twists', note: '2x15-20/side'),
         RoutineItemTemplate('BW Hip Thrusts', note: '4xMax + Iso hold'),
         RoutineItemTemplate('Walking Lunges', note: '2x12-16 steps/leg'),
-        RoutineItemTemplate('Dumbbell Deadlifts', note: '2x20 (2s pause bottom)'),
+        RoutineItemTemplate('Dumbbell Deadlifts',
+            note: '2x20 (2s pause bottom)'),
         RoutineItemTemplate('Superman Hold', note: '3xMax'),
         RoutineItemTemplate('Step Downs', note: '1x15'),
         RoutineItemTemplate('Mountain Climbers', note: '2x30s'),
@@ -231,7 +239,8 @@ List<RoutineTemplate> getHardcodedRoutines() {
         RoutineItemTemplate('Reverse Plank', note: '2x30-40s'),
         RoutineItemTemplate('Plank with Reach', note: '2x8/side (Rotation)'),
         RoutineItemTemplate('Russian Twists', note: '2x20-30'),
-        RoutineItemTemplate('Full Range of Motion Leg Presses', note: '1x15 (Finisher)'),
+        RoutineItemTemplate('Full Range of Motion Leg Presses',
+            note: '1x15 (Finisher)'),
         RoutineItemTemplate('Lying Windshield Wipers', note: '1x15/side'),
         RoutineItemTemplate('Tuck Reverse Hyperextensions', note: '1x15'),
         RoutineItemTemplate('Mountain Climbers', note: '1x30'),
@@ -264,11 +273,11 @@ List<RoutineTemplate> getHardcodedRoutines() {
       ],
     ),
     // ---------------------------------------------------------
-    // 5. WEIGHTED FULL BODY (Salı/Perşembe/Cumartesi)
+    // 5. WEIGHTED FULL BODY (Tue/Thu/Sat)
     // ---------------------------------------------------------
     RoutineTemplate(
       category: 'Weighted Full Body',
-      routineName: 'FB Salı (Tuesday)',
+      routineName: 'FB Tuesday',
       exercises: [
         RoutineItemTemplate('Supinated Lat Pulldowns', note: '3x12'),
         RoutineItemTemplate('Walking Lunges', note: '3x12'),
@@ -286,7 +295,7 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Weighted Full Body',
-      routineName: 'FB Perşembe (Thursday)',
+      routineName: 'FB Thursday',
       exercises: [
         RoutineItemTemplate('Lat Pulldowns', note: '3x12'),
         RoutineItemTemplate('Jump Squats', note: '3x12'),
@@ -301,7 +310,7 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Weighted Full Body',
-      routineName: 'FB Cumartesi (Saturday)',
+      routineName: 'FB Saturday',
       exercises: [
         RoutineItemTemplate('Lat Pulldowns', note: '3x12'),
         RoutineItemTemplate('Barbell Squats', note: '3x12'),
@@ -314,16 +323,17 @@ List<RoutineTemplate> getHardcodedRoutines() {
         RoutineItemTemplate('Cable Face Pull', note: '2x12'),
         RoutineItemTemplate('Triceps Overhead Extension', note: '1xMax'),
         RoutineItemTemplate('Biceps Preacher Curl', note: '1xMax'),
-        RoutineItemTemplate('Smith Machine Calf Raise', note: '1xMax (Dumbbell)'),
+        RoutineItemTemplate('Smith Machine Calf Raise',
+            note: '1xMax (Dumbbell)'),
         RoutineItemTemplate('High-Knee Sprints', note: 'Finisher Walk/Sprint'),
       ],
     ),
     // ---------------------------------------------------------
-    // 6. CALISTHENICS FULL BODY (Salı/Perşembe/Cumartesi)
+    // 6. CALISTHENICS FULL BODY (Tue/Thu/Sat)
     // ---------------------------------------------------------
     RoutineTemplate(
       category: 'Cali Full Body',
-      routineName: 'Cali FB Salı',
+      routineName: 'Cali FB Tuesday',
       exercises: [
         RoutineItemTemplate('Chinups', note: '4xMax'),
         RoutineItemTemplate('Bulgarian Split Squats', note: '4x12'),
@@ -341,12 +351,13 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Cali Full Body',
-      routineName: 'Cali FB Perşembe',
+      routineName: 'Cali FB Thursday',
       exercises: [
         RoutineItemTemplate('Pullups', note: '4xMax'),
         RoutineItemTemplate('Jump Squats', note: '3x15'),
         RoutineItemTemplate('Jump Lunges', note: '3x12'),
-        RoutineItemTemplate('Plyometric Feet Elevated Bench Dips', note: '3xMax'),
+        RoutineItemTemplate('Plyometric Feet Elevated Bench Dips',
+            note: '3xMax'),
         RoutineItemTemplate('Kettlebell Swings', note: '4x15 (Banded)'),
         RoutineItemTemplate('Incline Rows', note: '4xMax'),
         RoutineItemTemplate('Plyometric Pushups', note: '4xMax'),
@@ -357,7 +368,7 @@ List<RoutineTemplate> getHardcodedRoutines() {
     ),
     RoutineTemplate(
       category: 'Cali Full Body',
-      routineName: 'Cali FB Cumartesi',
+      routineName: 'Cali FB Saturday',
       exercises: [
         RoutineItemTemplate('Pullups', note: '4xMax'),
         RoutineItemTemplate('Cossack Squats', note: '3x12'),
@@ -379,33 +390,39 @@ List<RoutineTemplate> getHardcodedRoutines() {
     // ---------------------------------------------------------
     RoutineTemplate(
       category: 'Hybrid / Skill',
-      routineName: 'Gün 1: Push & Squat (Handstand/Planche)',
+      routineName: 'Day 1: Push & Squat (Handstand/Planche)',
       exercises: [
-        RoutineItemTemplate('Wall Walks', note: '3xNear Failure (Handstand Strength)'),
-        RoutineItemTemplate('Pseudo Planche Pushups', note: '3x8-10 (Planche Focus)'),
+        RoutineItemTemplate('Wall Walks',
+            note: '3xNear Failure (Handstand Strength)'),
+        RoutineItemTemplate('Pseudo Planche Pushups',
+            note: '3x8-10 (Planche Focus)'),
         RoutineItemTemplate('Bulgarian Split Squats', note: '3x8-10 (Heavy)'),
         RoutineItemTemplate('Dips', note: '3xFailure (RIR 0)'),
         RoutineItemTemplate('Z-Press', note: '3x10-12 (Stability)'),
-        RoutineItemTemplate('Cable Triceps Extension', note: '3x12-15 (Long Head)'),
+        RoutineItemTemplate('Cable Triceps Extension',
+            note: '3x12-15 (Long Head)'),
         RoutineItemTemplate('Dragon Flag Negatives', note: '3x5 (Slow)'),
       ],
     ),
     RoutineTemplate(
       category: 'Hybrid / Skill',
-      routineName: 'Gün 2: Pull & Hinge (MuscleUp/Nordic)',
+      routineName: 'Day 2: Pull & Hinge (MuscleUp/Nordic)',
       exercises: [
-        RoutineItemTemplate('Explosive Lat Pulldown', note: '4x6-8 (Muscle-Up Power)'),
+        RoutineItemTemplate('Explosive Lat Pulldown',
+            note: '4x6-8 (Muscle-Up Power)'),
         RoutineItemTemplate('Lying Leg Curls', note: '4x6-8 (Eccentric Focus)'),
         RoutineItemTemplate('Pullups', note: '3xFailure (Weighted/Straps)'),
         RoutineItemTemplate('Dumbbell Deadlifts', note: '3x8-12 (RDL Focus)'),
-        RoutineItemTemplate('Feet Elevated Inverted Rows', note: '3x10-12 (Front Lever)'),
-        RoutineItemTemplate('Resistance Band WoodChoppers', note: '3x12/side (Rotation)'),
+        RoutineItemTemplate('Feet Elevated Inverted Rows',
+            note: '3x10-12 (Front Lever)'),
+        RoutineItemTemplate('Resistance Band WoodChoppers',
+            note: '3x12/side (Rotation)'),
         RoutineItemTemplate('Cable Face Pull', note: '3x15-20 (Prehab)'),
       ],
     ),
     RoutineTemplate(
       category: 'Hybrid / Skill',
-      routineName: 'Gün 3: Hybrid & Armor (Athletics)',
+      routineName: 'Day 3: Hybrid & Armor (Athletics)',
       exercises: [
         RoutineItemTemplate('Box Jumps', note: '4x5 (Max Effort)'),
         RoutineItemTemplate('Smith Machine Squat', note: '3x10-12 (Volume)'),
@@ -413,9 +430,9 @@ List<RoutineTemplate> getHardcodedRoutines() {
         RoutineItemTemplate('Hammer Curl', note: '3x12-15 (+Wrist Curls)'),
         RoutineItemTemplate('Smith Machine Calf Raise', note: '4x12-15'),
         RoutineItemTemplate('Tibialis Raises', note: '3x25 (Prehab)'),
-        RoutineItemTemplate('Hanging Leg Raises', note: '3x10-15 (Compression)'),
+        RoutineItemTemplate('Hanging Leg Raises',
+            note: '3x10-15 (Compression)'),
       ],
     ),
   ];
 }
-

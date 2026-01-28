@@ -4,6 +4,8 @@ import '../local_db/database_helper.dart';
 import '../models/exercise_definition_model.dart';
 import '../models/exercise_muscle_impact_model.dart';
 import '../models/muscle_model.dart';
+import '../models/routine_model.dart';
+import '../models/routine_item_model.dart';
 import '../models/sportif_goal_model.dart';
 import '../models/workout_session_model.dart';
 import '../models/workout_set_model.dart';
@@ -19,7 +21,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   @override
   Future<List<MuscleModel>> getAllMuscles() async {
     final db = await _dbHelper.database;
-    final result = await db.query('muscles', orderBy: 'group_name ASC, name ASC');
+    final result =
+        await db.query('muscles', orderBy: 'group_name ASC, name ASC');
     return result.map((map) => MuscleModel.fromMap(map)).toList();
   }
 
@@ -63,7 +66,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
 
   // === Exercise Definitions (Enhanced) ===
   @override
-  Future<List<ExerciseDefinition>> getAllExerciseDefinitions({bool includeArchived = false}) async {
+  Future<List<ExerciseDefinition>> getAllExerciseDefinitions(
+      {bool includeArchived = false}) async {
     final db = await _dbHelper.database;
     final result = await db.query(
       'exercise_definitions',
@@ -121,7 +125,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   @override
   Future<int> deleteExerciseDefinition(int id) async {
     final db = await _dbHelper.database;
-    return await db.delete('exercise_definitions', where: 'id = ?', whereArgs: [id]);
+    return await db
+        .delete('exercise_definitions', where: 'id = ?', whereArgs: [id]);
   }
 
   @override
@@ -137,7 +142,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
 
   // === Exercise Muscle Impact (Bio-Mechanic Engine) ===
   @override
-  Future<List<ExerciseMuscleImpactModel>> getMuscleImpactsForExercise(int exerciseId) async {
+  Future<List<ExerciseMuscleImpactModel>> getMuscleImpactsForExercise(
+      int exerciseId) async {
     final db = await _dbHelper.database;
     final result = await db.query(
       'exercise_muscle_impact',
@@ -149,7 +155,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   }
 
   @override
-  Future<List<ExerciseMuscleImpactModel>> getExercisesForMuscle(int muscleId) async {
+  Future<List<ExerciseMuscleImpactModel>> getExercisesForMuscle(
+      int muscleId) async {
     final db = await _dbHelper.database;
     final result = await db.query(
       'exercise_muscle_impact',
@@ -193,13 +200,111 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
     );
   }
 
+  // === Routines ===
+  @override
+  Future<List<Routine>> getAllRoutines() async {
+    final db = await _dbHelper.database;
+    final result = await db.query('routines', orderBy: 'created_at DESC');
+    return result.map((map) => Routine.fromMap(map)).toList();
+  }
+
+  @override
+  Future<Routine?> getRoutineById(int id) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'routines',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return Routine.fromMap(result.first);
+  }
+
+  @override
+  Future<List<RoutineItem>> getItemsByRoutineId(int routineId) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'routine_items',
+      where: 'routine_id = ?',
+      whereArgs: [routineId],
+      orderBy: 'order_index ASC',
+    );
+    return result.map((map) => RoutineItem.fromMap(map)).toList();
+  }
+
+  @override
+  Future<int> createRoutine(Routine routine) async {
+    final db = await _dbHelper.database;
+    final map = routine.toMap();
+    map.remove('id');
+    return await db.insert('routines', map);
+  }
+
+  @override
+  Future<void> updateRoutine(Routine routine) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'routines',
+      routine.toMap(),
+      where: 'id = ?',
+      whereArgs: [routine.id],
+    );
+  }
+
+  @override
+  Future<void> deleteRoutine(int id) async {
+    final db = await _dbHelper.database;
+    await db.delete('routines', where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<int> createRoutineItem(RoutineItem item) async {
+    final db = await _dbHelper.database;
+    final map = item.toMap();
+    map.remove('id');
+    return await db.insert('routine_items', map);
+  }
+
+  @override
+  Future<void> updateRoutineItem(RoutineItem item) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'routine_items',
+      item.toMap(),
+      where: 'id = ?',
+      whereArgs: [item.id],
+    );
+  }
+
+  @override
+  Future<void> deleteRoutineItem(int id) async {
+    final db = await _dbHelper.database;
+    await db.delete('routine_items', where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<void> reorderRoutineItems(
+      int routineId, List<int> itemIdsInOrder) async {
+    final db = await _dbHelper.database;
+    for (var i = 0; i < itemIdsInOrder.length; i++) {
+      await db.update(
+        'routine_items',
+        {'order_index': i},
+        where: 'id = ? AND routine_id = ?',
+        whereArgs: [itemIdsInOrder[i], routineId],
+      );
+    }
+  }
+
   // === Workout Sessions ===
   @override
   Future<List<WorkoutSessionModel>> getSessionsByDate(DateTime date) async {
     final db = await _dbHelper.database;
     final dateOnly = DateTime(date.year, date.month, date.day);
     final startOfDay = dateOnly.millisecondsSinceEpoch;
-    final endOfDay = dateOnly.add(const Duration(days: 1)).millisecondsSinceEpoch - 1;
+    final endOfDay =
+        dateOnly.add(const Duration(days: 1)).millisecondsSinceEpoch - 1;
 
     final result = await db.query(
       'workout_sessions',
@@ -264,7 +369,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   Future<int> deleteSession(int id) async {
     final db = await _dbHelper.database;
     // CASCADE delete will handle workout_logs
-    return await db.delete('workout_sessions', where: 'id = ?', whereArgs: [id]);
+    return await db
+        .delete('workout_sessions', where: 'id = ?', whereArgs: [id]);
   }
 
   // === Workout Sets ===
@@ -333,12 +439,14 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   @override
   Future<int> deleteSetsBySession(int sessionId) async {
     final db = await _dbHelper.database;
-    return await db.delete('workout_logs', where: 'session_id = ?', whereArgs: [sessionId]);
+    return await db.delete('workout_logs',
+        where: 'session_id = ?', whereArgs: [sessionId]);
   }
 
   // === Sportif Goals ===
   @override
-  Future<List<SportifGoalModel>> getAllGoals({bool includeArchived = false}) async {
+  Future<List<SportifGoalModel>> getAllGoals(
+      {bool includeArchived = false}) async {
     final db = await _dbHelper.database;
     final result = await db.query(
       'sportif_goals',
@@ -437,7 +545,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
 
   // === Complex Queries (JOIN Operations) ===
   @override
-  Future<ExerciseDefinitionWithImpacts?> getExerciseWithImpacts(int exerciseId) async {
+  Future<ExerciseDefinitionWithImpacts?> getExerciseWithImpacts(
+      int exerciseId) async {
     // Get exercise definition
     final exercise = await getExerciseDefinitionById(exerciseId);
     if (exercise == null) return null;
@@ -452,7 +561,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   }
 
   @override
-  Future<List<ExerciseWithImpact>> getExercisesForMuscleWithScores(int muscleId) async {
+  Future<List<ExerciseWithImpact>> getExercisesForMuscleWithScores(
+      int muscleId) async {
     final db = await _dbHelper.database;
 
     final result = await db.rawQuery('''
@@ -461,6 +571,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
         e.name,
         e.default_type,
         e.body_part,
+        e.grip,
+        e.style,
         e.types,
         e.is_archived,
         emi.impact_score
@@ -476,6 +588,8 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
         'name': map['name'],
         'default_type': map['default_type'],
         'body_part': map['body_part'],
+        'grip': map['grip'],
+        'style': map['style'],
         'types': map['types'],
         'is_archived': map['is_archived'],
       });
@@ -550,4 +664,3 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
     }).toList();
   }
 }
-

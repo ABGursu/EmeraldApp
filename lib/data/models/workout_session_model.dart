@@ -7,6 +7,7 @@ class WorkoutSessionModel {
   final int? durationMinutes;
   final int? rating; // 1-10 scale
   final List<String> goalTags; // e.g., ["Hypertrophy Phase", "Capoeira Prep"]
+  final int? routineId; // null = free session; set when started from a routine
   final DateTime createdAt;
 
   const WorkoutSessionModel({
@@ -17,6 +18,7 @@ class WorkoutSessionModel {
     this.durationMinutes,
     this.rating,
     this.goalTags = const [],
+    this.routineId,
     required this.createdAt,
   }) : assert(rating == null || (rating >= 1 && rating <= 10),
             'Rating must be between 1 and 10 if provided');
@@ -29,6 +31,7 @@ class WorkoutSessionModel {
     int? durationMinutes,
     int? rating,
     List<String>? goalTags,
+    int? routineId,
     DateTime? createdAt,
   }) {
     return WorkoutSessionModel(
@@ -39,6 +42,7 @@ class WorkoutSessionModel {
       durationMinutes: durationMinutes ?? this.durationMinutes,
       rating: rating ?? this.rating,
       goalTags: goalTags ?? this.goalTags,
+      routineId: routineId ?? this.routineId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -51,6 +55,7 @@ class WorkoutSessionModel {
         'duration_minutes': durationMinutes,
         'rating': rating,
         'goal_tags': goalTags.isEmpty ? null : goalTags.join(','),
+        'routine_id': routineId,
         'created_at': createdAt.millisecondsSinceEpoch,
       };
 
@@ -68,6 +73,7 @@ class WorkoutSessionModel {
       goalTags: goalTagsStr != null && goalTagsStr.isNotEmpty
           ? goalTagsStr.split(',').map((s) => s.trim()).toList()
           : [],
+      routineId: map['routine_id'] as int?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );
   }

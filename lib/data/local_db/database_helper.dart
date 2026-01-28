@@ -1,9 +1,11 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'prefilled_exercises_data.dart';
+
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 18;
+  static const int _dbVersion = 22;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -68,10 +70,8 @@ class DatabaseHelper {
 
     // Exercise Logger Module Tables (v8 structure - will be enhanced in v18)
     await _createExerciseLoggerTablesV8(db);
-    await _seedExerciseDefinitions(db);
-    // Note: Hardcoded routines are NOT seeded in v18 - user starts fresh with sessions
 
-    // Bio-Mechanic Training System Tables (v18)
+    // Bio-Mechanic Training System Tables (v18) – must exist before prefilled exercise seed
     await _createBioMechanicTables(db);
     await _seedMusclesTable(db);
 
@@ -88,6 +88,9 @@ class DatabaseHelper {
     } catch (e) {
       // Column might already exist
     }
+
+    // Prefilled exercises from Exercises_Filled (3).xlsx (all editable in-app)
+    await _seedExerciseDefinitions(db);
 
     // For new databases, use the new workout_logs structure directly
     // Drop old workout_logs if it exists and create new one
@@ -551,11 +554,13 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
         default_type TEXT,
-        body_part TEXT
+        body_part TEXT,
+        grip TEXT,
+        style TEXT
       )
     ''');
 
-    // B. Routines (Şablonlar)
+    // B. Routines (Templates)
     await db.execute('''
       CREATE TABLE routines(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -564,7 +569,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // C. Routine Items (Şablon İçerikleri)
+    // C. Routine Items (Template contents)
     await db.execute('''
       CREATE TABLE routine_items(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -579,7 +584,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // D. Workout Logs (Günlük Kayıtlar)
+    // D. Workout Logs (Daily Records)
     await db.execute('''
       CREATE TABLE workout_logs(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -918,6 +923,48 @@ class DatabaseHelper {
       // Bio-Mechanic Training System Migration
       await _migrateToBioMechanicSystem(db);
     }
+    if (oldVersion < 19) {
+      // Add grip and style metadata to exercise_definitions
+      try {
+        await db
+            .execute('ALTER TABLE exercise_definitions ADD COLUMN grip TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+      try {
+        await db
+            .execute('ALTER TABLE exercise_definitions ADD COLUMN style TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
+    if (oldVersion < 20) {
+      // Prefilled exercises from Exercises_Filled (3).xlsx (all editable in-app)
+      await _seedPrefilledMusclesForExcel(db);
+      await _seedPrefilledExercisesFromExcel(db);
+    }
+    if (oldVersion < 21) {
+      // Link workout_sessions to routines (routines)
+      try {
+        await db.execute(
+            'ALTER TABLE workout_sessions ADD COLUMN routine_id INTEGER');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
+    if (oldVersion < 22) {
+      // Add styles and types metadata to sportif_goals
+      try {
+        await db.execute('ALTER TABLE sportif_goals ADD COLUMN styles TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+      try {
+        await db.execute('ALTER TABLE sportif_goals ADD COLUMN types TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   /// Creates database indexes for performance optimization
@@ -972,290 +1019,135 @@ class DatabaseHelper {
     ''');
   }
 
-  /// Seeds the exercise definitions database with anatomical exercise data
+  /// Seeds the exercise definitions from Exercises_Filled (3).xlsx (prefilled; all editable in-app).
   Future<void> _seedExerciseDefinitions(Database db) async {
-    // Anatomical Exercise Database
-    final anatomicalExerciseDatabase = {
-      // --- ALT VÜCUT (LOWER BODY) ---
-      'Quadriceps (Ön Bacak & Diz Ekstansiyonu)': [
-        'Cossack Squats',
-        'Bulgarian Split Squats',
-        'Shrimp Squats',
-        'Deep Squats',
-        'Jump Squats',
-        'Jump Lunges',
-        'Walking Lunges',
-        'Step Downs',
-        'Barbell Squats',
-        'Smith Machine Squat',
-        'Full Range of Motion Leg Presses',
-        'Lying Leg Presses',
-        'Ankle Twisted Squats',
-      ],
-      'Hamstrings & Gluteus Maximus (Arka Bacak & Kalça)': [
-        'Feet Elevated Leg Curls',
-        'Glute Bridges',
-        'Hip Thrusts',
-        'BW Hip Thrusts',
-        'Romanian Deadlifts',
-        'Dumbbell Deadlifts',
-        'Resistance Band RDL',
-        'Lying Leg Curls',
-        'Kettlebell Swings',
-      ],
-      'Hip Flexors (Kalça Bükücüler & Patlayıcılık)': [
-        'Slow Mountain Climbers',
-        'Mountain Climbers',
-        'High-Knee Sprints',
-        'Box Jumps',
-      ],
-      'Calves (Kalf - Gastrocnemius & Soleus)': [
-        'Calf Raises',
-        'Smith Machine Calf Raise',
-        'Toe Raises',
-        'High-Heels Sprints',
-      ],
-      'Tibialis Anterior (Kaval Kemiği & Ayak Bileği)': [
-        'Tibialis Raises',
-        'Ankle Twisted Squats',
-      ],
-      // --- ÜST VÜCUT İTİŞ (UPPER PUSH) ---
-      'Pectoralis Major (Göğüs)': [
-        'Pushups',
-        'Decline Pushups',
-        'Diamond Pushups',
-        'Plyometric Pushups',
-        'Archer Pushups',
-        'Dips',
-        'Feet Elevated Bench Dips',
-        'Plyometric Feet Elevated Bench Dips',
-        'Assisted Dip Machine',
-        'Incline Dumbell Press',
-        'Dumbbell Press',
-        'Resistance Band Fly',
-      ],
-      'Anterior Deltoid (Ön Omuz)': [
-        'Military Press',
-        'Dumbbell Shoulder Press',
-        'Shoulder Press Machine',
-        'Z-Press',
-        'Banded Shoulder Press',
-        'Pike Pushups',
-        'Pseudo Planche Pushups',
-        'Planche Progressions',
-      ],
-      'Triceps Brachii (Arka Kol)': [
-        'Triceps Overhead Extension',
-        'Prone Overhead Tricep Extensions',
-        'Cable Triceps Extension',
-        'Tricep Pushdowns',
-        'Feet Elevated Bench Dips',
-      ],
-      // --- ÜST VÜCUT ÇEKİŞ (UPPER PULL) ---
-      'Latissimus Dorsi (Kanat - Dikey Çekiş)': [
-        'Pullups',
-        'Chinups',
-        'Neutral Grip Pullups',
-        'Wide Grip Australian Pullups',
-        'One Towel Pullups',
-        'Lat Pulldowns',
-        'Supinated Lat Pulldowns',
-        'Explosive Lat Pulldown',
-        'Resistance Band Pulls for Lats',
-      ],
-      'Rhomboids & Mid-Traps (Orta Sırt - Yatay Çekiş)': [
-        'Chest Supported Dumbbell Row',
-        'Knee to Bench Dumbell Row',
-        'Inverted Row',
-        'Barbell Row',
-        'Narrow Cable Row',
-        'Wide Seated Cable Rows',
-        'Incline Rows',
-        'T-Bar Rows',
-        'Resistance Band Rows',
-        'Feet Elevated Inverted Rows',
-      ],
-      'Upper Trapezius (Üst Trapez)': [
-        'Dumbbell Shrug',
-        'Smith Machine Shrugs',
-        'Z Bar Upright Row',
-        'Dumbbell Upright Rows',
-        'Banded Upright Row',
-      ],
-      'Posterior & Lateral Deltoid (Arka & Yan Omuz)': [
-        'Dumbbell Lateral Raise',
-        'Bentover Lateral Raise',
-        'Resistance Band Lateral Raises',
-        'Light Lateral Raises',
-        'Reverse Flies',
-      ],
-      'Rotator Cuff & Scapular Health (Omuz Sağlığı)': [
-        'Cable Face Pull',
-        'Banded Face Pull',
-        'Scapular Pull Ups',
-        'Scapular Pushups',
-        'Wall Walks',
-        'Handstand Hold',
-        'Dead Hangs',
-      ],
-      'Biceps Brachii (Pazu)': [
-        'Biceps Preacher Curl',
-        'Hammer Curl',
-        'Pelican Curl',
-      ],
-      'Forearms & Grip Strength (Ön Kol & Tutuş)': [
-        'Wrist Rolls',
-        'Forearm Twist',
-        'Hand Grippers',
-        'Finger Extensor Band',
-        'Grip Work',
-        "Farmer's Carry",
-      ],
-      // --- CORE & STABILITY (MERKEZ BÖLGE) ---
-      'Rectus Abdominis (Karın - Alt/Üst)': [
-        'Crunches',
-        'Sprinter Sit-Ups',
-        'Leg Raises',
-        'Hanging Leg Raises',
-        'Ab Rollout',
-        'Dragon Flag Negatives',
-        'Superman Snap-Ups',
-      ],
-      'Obliques (Yan Karın & Rotasyon)': [
-        'Russian Twists',
-        'Windshield Wipers',
-        'Lying Windshield Wipers',
-        'Resistance Band WoodChoppers',
-        'Cable Woodchoppers',
-        'Side Plank',
-        'Side to Side Turning Planks',
-        'Plank with Reach',
-        'Side Kickthroughs',
-        'Dumbbell Side Bends',
-        'Dumbbell Twists',
-      ],
-      'Transverse Abdominis & Stability (Derin Core)': [
-        'Plank',
-        'RKC Plank',
-        'Hollow Body Hold',
-        'Dead Bug',
-        'Bird-Dog',
-        'Vacuum Breaths',
-        'Plank with Thrusts',
-      ],
-      'Erector Spinae (Bel & Omurga)': [
-        'Hyperextensions',
-        'Reverse Hyperextensions',
-        'Tuck Reverse Hyperextensions',
-        'Superman Hold',
-        'Reverse Plank',
-      ],
-      // --- CARDIO & POWER ---
-      'Full Body Power & Cardio': [
-        'Jump Rope',
-        'Cable Punches',
-        'Resistance Band Punches',
-        'Banded Boxing',
-        'Ground Slam Simulation',
-        'Kegels',
-      ],
-    };
+    await _seedPrefilledMusclesForExcel(db);
+    await _seedPrefilledExercisesFromExcel(db);
+  }
 
-    // Helper function to extract default type from exercise name
-    String? extractDefaultType(String exerciseName) {
-      final lower = exerciseName.toLowerCase();
-      if (lower.contains('bw ') ||
-          lower.contains('bodyweight') ||
-          lower.startsWith('pushup') ||
-          lower.startsWith('pullup') ||
-          lower.startsWith('chinup') ||
-          lower.contains('squat') ||
-          lower.contains('lunge') ||
-          lower.contains('plank') ||
-          lower.contains('crunch') ||
-          lower.contains('sit-up') ||
-          lower.contains('leg raise') ||
-          lower.contains('bridge') ||
-          lower.contains('mountain climber') ||
-          lower.contains('dead hang') ||
-          lower.contains('handstand') ||
-          lower.contains('wall walk') ||
-          lower.contains('jump rope') ||
-          lower.contains('kegel') ||
-          lower.contains('hyperextension') ||
-          lower.contains('superman') ||
-          lower.contains('hollow body') ||
-          lower.contains('dead bug') ||
-          lower.contains('bird-dog') ||
-          lower.contains('vacuum') ||
-          lower.contains('inverted row') ||
-          lower.contains('dip') ||
-          lower.contains('pike pushup') ||
-          lower.contains('planche') ||
-          lower.contains('scapular') ||
-          lower.contains('box jump') ||
-          lower.contains('sprint') ||
-          lower.contains('toe raise') ||
-          lower.contains('tibialis raise') ||
-          lower.contains('calf raise')) {
-        return 'BW';
-      }
-      if (lower.contains('dumbbell') ||
-          lower.contains('db ') ||
-          lower.contains('dumbell')) {
-        return 'Dumbbell';
-      }
-      if (lower.contains('cable') ||
-          lower.contains('pulldown') ||
-          lower.contains('pushdown') ||
-          lower.contains('face pull') ||
-          lower.contains('woodchopper')) {
-        return 'Cable';
-      }
-      if (lower.contains('barbell') ||
-          lower.contains('bb ') ||
-          lower.contains('t-bar')) {
-        return 'Barbell';
-      }
-      if (lower.contains('machine') ||
-          lower.contains('smith machine') ||
-          lower.contains('leg press') ||
-          lower.contains('assisted') ||
-          lower.contains('preacher curl')) {
-        return 'Machine';
-      }
-      if (lower.contains('resistance band') ||
-          lower.contains('banded') ||
-          lower.contains('band ')) {
-        return 'Resistance Band';
-      }
-      if (lower.contains('kettlebell') || lower.contains('kb ')) {
-        return 'Kettlebell';
-      }
-      return null;
+  /// Ensures Excel muscle names exist in muscles table (by name; ignore if already exist).
+  Future<void> _seedPrefilledMusclesForExcel(Database db) async {
+    for (final m in prefilledMuscles) {
+      await db.insert(
+        'muscles',
+        {'name': m.name, 'group_name': m.groupName},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
     }
+  }
 
-    // Insert all exercises (only if they don't exist)
-    for (final entry in anatomicalExerciseDatabase.entries) {
-      final bodyPart = entry.key;
-      final exercises = entry.value;
+  static String? _extractDefaultType(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('bw ') ||
+        lower.contains('bodyweight') ||
+        lower.startsWith('pushup') ||
+        lower.startsWith('pullup') ||
+        lower.startsWith('chinup') ||
+        lower.contains('squat') ||
+        lower.contains('lunge') ||
+        lower.contains('plank') ||
+        lower.contains('crunch') ||
+        lower.contains('sit-up') ||
+        lower.contains('leg raise') ||
+        lower.contains('bridge') ||
+        lower.contains('mountain climber') ||
+        lower.contains('dead hang') ||
+        lower.contains('handstand') ||
+        lower.contains('wall walk') ||
+        lower.contains('jump rope') ||
+        lower.contains('kegel') ||
+        lower.contains('hyperextension') ||
+        lower.contains('superman') ||
+        lower.contains('hollow body') ||
+        lower.contains('dead bug') ||
+        lower.contains('inverted row') ||
+        lower.contains('dip') ||
+        lower.contains('pike pushup') ||
+        lower.contains('planche') ||
+        lower.contains('scapular') ||
+        lower.contains('box jump') ||
+        lower.contains('sprint') ||
+        lower.contains('toe raise') ||
+        lower.contains('tibialis raise') ||
+        lower.contains('calf raise')) {
+      return 'BW';
+    }
+    if (lower.contains('dumbbell') ||
+        lower.contains('db ') ||
+        lower.contains('dumbell')) return 'Dumbbell';
+    if (lower.contains('cable') ||
+        lower.contains('pulldown') ||
+        lower.contains('pushdown') ||
+        lower.contains('face pull') ||
+        lower.contains('woodchopper')) return 'Cable';
+    if (lower.contains('barbell') ||
+        lower.contains('bb ') ||
+        lower.contains('t-bar')) return 'Barbell';
+    if (lower.contains('machine') ||
+        lower.contains('smith machine') ||
+        lower.contains('leg press') ||
+        lower.contains('assisted') ||
+        lower.contains('preacher curl')) return 'Machine';
+    if (lower.contains('resistance band') ||
+        lower.contains('banded') ||
+        lower.contains('band ')) return 'Resistance Band';
+    if (lower.contains('kettlebell') || lower.contains('kb '))
+      return 'Kettlebell';
+    return null;
+  }
 
-      for (final exerciseName in exercises) {
-        // Check if exercise already exists (to avoid duplicates)
-        final existing = await db.query(
-          'exercise_definitions',
+  /// Inserts prefilled exercises and their muscle impacts (by name; skip if exercise already exists).
+  Future<void> _seedPrefilledExercisesFromExcel(Database db) async {
+    for (final row in prefilledExercises) {
+      final existing = await db.query(
+        'exercise_definitions',
+        where: 'name = ?',
+        whereArgs: [row.name],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) continue;
+
+      await db.insert(
+        'exercise_definitions',
+        {
+          'name': row.name,
+          'default_type': _extractDefaultType(row.name),
+          'body_part': row.bodyPart,
+          'grip': row.grip,
+          'style': row.style,
+          'types': null,
+          'is_archived': 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+
+      final exRows = await db.query(
+        'exercise_definitions',
+        where: 'name = ?',
+        whereArgs: [row.name],
+        limit: 1,
+      );
+      if (exRows.isEmpty) continue;
+      final exerciseId = exRows.first['id'] as int;
+
+      for (final impact in row.muscles) {
+        final mRows = await db.query(
+          'muscles',
           where: 'name = ?',
-          whereArgs: [exerciseName],
+          whereArgs: [impact.muscleName],
           limit: 1,
         );
-
-        if (existing.isEmpty) {
-          await db.insert('exercise_definitions', {
-            'name': exerciseName,
-            'default_type': extractDefaultType(exerciseName),
-            'body_part': bodyPart,
-          });
-        }
+        if (mRows.isEmpty) continue;
+        final muscleId = mRows.first['id'] as int;
+        await db.insert(
+          'exercise_muscle_impact',
+          {
+            'exercise_id': exerciseId,
+            'muscle_id': muscleId,
+            'impact_score': impact.rate.clamp(1, 10),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
   }
@@ -1290,6 +1182,8 @@ class DatabaseHelper {
         name TEXT NOT NULL UNIQUE,
         default_type TEXT,
         body_part TEXT,
+        grip TEXT,
+        style TEXT,
         types TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       )
@@ -1307,7 +1201,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // 5. Workout Sessions (Day -> Session hierarchy)
+    // 5. Workout Sessions (Day -> Session hierarchy; optional routine_id for "from routine" sessions)
     await db.execute('''
       CREATE TABLE workout_sessions(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1317,7 +1211,9 @@ class DatabaseHelper {
         duration_minutes INTEGER,
         rating INTEGER CHECK(rating >= 1 AND rating <= 10),
         goal_tags TEXT,
-        created_at INTEGER NOT NULL
+        routine_id INTEGER,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(routine_id) REFERENCES routines(id) ON DELETE SET NULL
       )
     ''');
 
@@ -1345,7 +1241,9 @@ class DatabaseHelper {
         name TEXT NOT NULL UNIQUE,
         description TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        styles TEXT,
+        types TEXT
       )
     ''');
 
@@ -1476,6 +1374,17 @@ class DatabaseHelper {
     try {
       await db.execute(
           'ALTER TABLE exercise_definitions ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+    } catch (e) {
+      // Column might already exist
+    }
+    try {
+      await db.execute('ALTER TABLE exercise_definitions ADD COLUMN grip TEXT');
+    } catch (e) {
+      // Column might already exist
+    }
+    try {
+      await db
+          .execute('ALTER TABLE exercise_definitions ADD COLUMN style TEXT');
     } catch (e) {
       // Column might already exist
     }

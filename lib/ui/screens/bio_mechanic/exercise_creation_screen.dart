@@ -50,10 +50,10 @@ class ExerciseCreationScreen extends StatelessWidget {
                   onChanged: (value) => vm.setExerciseSearchQuery(value),
                 ),
               ),
-              // Body Part Filter
-              if (vm.muscleGroups.isNotEmpty)
+              // Body Part Filter (driven by Excel bodyPart values)
+              if (vm.bodyParts.isNotEmpty)
                 QuickFilterBar<String>(
-                  items: vm.muscleGroups,
+                  items: vm.bodyParts,
                   selectedItem: vm.selectedBodyPart,
                   onItemSelected: (bodyPart) {
                     vm.setSelectedBodyPart(bodyPart);
@@ -144,14 +144,26 @@ class ExerciseCreationScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (exercise.defaultType != null)
+                    if (exercise.defaultType != null &&
+                        exercise.defaultType!.isNotEmpty)
                       Text(
                         'Type: ${exercise.defaultType}',
                         overflow: TextOverflow.ellipsis,
                       ),
-                    if (exercise.bodyPart != null)
+                    if (exercise.bodyPart != null &&
+                        exercise.bodyPart!.isNotEmpty)
                       Text(
                         'Body Part: ${exercise.bodyPart}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (exercise.grip != null && exercise.grip!.isNotEmpty)
+                      Text(
+                        'Grip: ${exercise.grip}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (exercise.style != null && exercise.style!.isNotEmpty)
+                      Text(
+                        'Style: ${exercise.style}',
                         overflow: TextOverflow.ellipsis,
                       ),
                     if (exercise.types.isNotEmpty)
@@ -268,6 +280,8 @@ class _ExerciseEditScreen extends StatefulWidget {
 
 class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
   late TextEditingController _nameController;
+  late TextEditingController _gripController;
+  late TextEditingController _styleController;
   List<String> _selectedTypes = [];
   List<ExerciseMuscleImpactModel> _muscleImpacts = [];
   bool _loading = false;
@@ -278,6 +292,12 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
     _nameController = TextEditingController(
       text: widget.exercise?.name ?? '',
     );
+    _gripController = TextEditingController(
+      text: widget.exercise?.grip ?? '',
+    );
+    _styleController = TextEditingController(
+      text: widget.exercise?.style ?? '',
+    );
     _selectedTypes = widget.exercise?.types ?? [];
     _loadMuscleImpacts();
   }
@@ -285,6 +305,8 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _gripController.dispose();
+    _styleController.dispose();
     super.dispose();
   }
 
@@ -330,6 +352,28 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
                     ),
                     textCapitalization: TextCapitalization.words,
                     autofocus: widget.exercise == null,
+                  ),
+                  const SizedBox(height: 16),
+                  // Grip (optional)
+                  TextField(
+                    controller: _gripController,
+                    decoration: const InputDecoration(
+                      labelText: 'Grip (optional)',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., Supinated, Neutral, Wide',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                  ),
+                  const SizedBox(height: 16),
+                  // Style (optional)
+                  TextField(
+                    controller: _styleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Style / Stance (optional)',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g., Close stance, Paused, Tempo 3-1-1',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                   const SizedBox(height: 24),
                   // Exercise Types
@@ -555,6 +599,12 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
       name: _nameController.text.trim(),
       defaultType: widget.exercise?.defaultType,
       bodyPart: widget.exercise?.bodyPart,
+      grip: _gripController.text.trim().isEmpty
+          ? null
+          : _gripController.text.trim(),
+      style: _styleController.text.trim().isEmpty
+          ? null
+          : _styleController.text.trim(),
       types: _selectedTypes,
       isArchived: widget.exercise?.isArchived ?? false,
     );

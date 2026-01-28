@@ -5,6 +5,7 @@ import '../../viewmodels/bio_mechanic_view_model.dart';
 import 'daily_logger_screen.dart';
 import 'exercise_creation_screen.dart';
 import 'progressive_overload_screen.dart';
+import 'routines_list_screen.dart';
 import 'sportif_goals_manager_screen.dart';
 
 /// Main Hub Screen for the Bio-Mechanic Training Management System.
@@ -75,7 +76,7 @@ class BioMechanicHubScreen extends StatelessWidget {
                         children: [
                           _buildActionCard(
                             context,
-                            title: 'Sportif Goals',
+                            title: 'Sports Goals',
                             icon: Icons.flag,
                             color: Theme.of(context).colorScheme.primary,
                             onTap: () => Navigator.push(
@@ -95,6 +96,18 @@ class BioMechanicHubScreen extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => const DailyLoggerScreen(),
+                              ),
+                            ),
+                          ),
+                          _buildActionCard(
+                            context,
+                            title: 'Routines',
+                            icon: Icons.list_alt,
+                            color: Colors.deepPurple,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RoutinesListScreen(),
                               ),
                             ),
                           ),
@@ -123,6 +136,13 @@ class BioMechanicHubScreen extends StatelessWidget {
                               ),
                             ),
                           ),
+                          _buildActionCard(
+                            context,
+                            title: 'Export Daily Logger',
+                            icon: Icons.upload_file,
+                            color: Colors.indigo,
+                            onTap: () => _showExportDailyLoggerDialog(context),
+                          ),
                         ],
                       );
                     },
@@ -134,6 +154,69 @@ class BioMechanicHubScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  void _showExportDailyLoggerDialog(BuildContext context) async {
+    final vm = context.read<BioMechanicViewModel>();
+
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (range == null || !context.mounted) return;
+
+    // Show loading dialog while exporting
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (loadingContext) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Exporting Daily Logger...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final path = await vm.exportDailyLogger(
+        from: range.start,
+        to: range.end.add(
+          const Duration(hours: 23, minutes: 59, seconds: 59),
+        ),
+      );
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Daily Logger exported to:\n$path'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
   }
 
   Widget _buildStatsCard(BuildContext context, BioMechanicViewModel vm) {

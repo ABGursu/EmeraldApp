@@ -41,7 +41,7 @@ class DailyLoggerScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSessionDialog(context),
+        onPressed: () => _showAddSessionChoice(context),
         child: const Icon(Icons.add),
       ),
     );
@@ -152,6 +152,100 @@ class DailyLoggerScreen extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  /// Choose between an empty workout or starting from a routine.
+  void _showAddSessionChoice(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline),
+              title: const Text('Empty workout'),
+              subtitle:
+                  const Text('Create a new session with title and goal tags'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showAddSessionDialog(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('Start from routine'),
+              subtitle:
+                  const Text('Create a session for today from a saved routine'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showStartFromRoutineDialog(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Select a routine and create a session for the selected day.
+  void _showStartFromRoutineDialog(BuildContext context) {
+    final vm = context.read<BioMechanicViewModel>();
+    final routines = vm.routines;
+    if (routines.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please create at least one routine first on the Routines screen.',
+          ),
+        ),
+      );
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Start from routine'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: routines.length,
+            itemBuilder: (_, i) {
+              final r = routines[i];
+              return ListTile(
+                title: Text(r.name),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    await vm.createSessionFromRoutine(routineId: r.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Workout created for "${r.name}"'),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: $e')),
+                      );
+                    }
+                  }
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
   }
 

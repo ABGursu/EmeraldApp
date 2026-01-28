@@ -79,11 +79,10 @@ class WorkoutLog {
     );
   }
 
-  /// Özel text çıktısı: "[dd.MM.yyyy], [Ad] [Set]x[Tekrar] [Ağırlık]"
+  /// Custom text output: "[dd.MM.yyyy], [Name] [Sets]x[Reps] [Weight]"
   String toLogString() {
     final dateStr = formatDate(date);
     final weightStr = weight != null ? ' ${weight}kg' : '';
     return '$dateStr, $exerciseName ${sets}x$reps$weightStr';
   }
 }
-
