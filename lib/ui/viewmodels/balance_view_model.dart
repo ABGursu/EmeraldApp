@@ -85,6 +85,17 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     await loadCurrentBudget();
   }
 
+  /// Deletes all transactions and budget goals. Tags are kept. Use for "start from scratch".
+  Future<void> resetAll() async {
+    await _repository.resetAll();
+    _groupedByDateCache = null;
+    _cachedGroupedTagId = null;
+    _cachedTransactionsHash = null;
+    await loadTransactions();
+    await loadCurrentBudget();
+    // Tags are kept; no need to reload them
+  }
+
   /// Loads budget start day from SharedPreferences
   Future<void> loadBudgetStartDay() async {
     final prefs = await SharedPreferences.getInstance();

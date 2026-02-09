@@ -6,5 +6,8 @@ abstract class IShoppingRepository {
   Future<int> deleteItem(String id);
   Future<List<ShoppingItemModel>> getAllItems();
   Future<ShoppingItemModel?> getItemById(String id);
+
+  /// Deletes all shopping items. Use for "start from scratch".
+  Future<void> resetAll();
 }
 

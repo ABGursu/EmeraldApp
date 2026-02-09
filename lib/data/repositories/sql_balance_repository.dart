@@ -117,4 +117,12 @@ class SqlBalanceRepository implements IBalanceRepository {
     if (result.isEmpty) return null;
     return BudgetGoalModel.fromMap(result.first).amount;
   }
+
+  @override
+  Future<void> resetAll() async {
+    final db = await _dbHelper.database;
+    await db.delete('transactions');
+    await db.delete('budget_goals');
+    // Tags are kept on purpose
+  }
 }

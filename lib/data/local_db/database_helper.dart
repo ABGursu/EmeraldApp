@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 22;
+  static const int _dbVersion = 26;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -73,7 +73,7 @@ class DatabaseHelper {
 
     // Bio-Mechanic Training System Tables (v18) – must exist before prefilled exercise seed
     await _createBioMechanicTables(db);
-    await _seedMusclesTable(db);
+    // Only prefilled muscles/exercises from Excel are seeded (no old anatomical list)
 
     // For new databases, enhance exercise_definitions immediately
     try {
@@ -85,6 +85,12 @@ class DatabaseHelper {
     try {
       await db.execute(
           'ALTER TABLE exercise_definitions ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0');
+    } catch (e) {
+      // Column might already exist
+    }
+    try {
+      await db.execute(
+          'ALTER TABLE exercise_definitions ADD COLUMN is_preinstalled INTEGER NOT NULL DEFAULT 0');
     } catch (e) {
       // Column might already exist
     }
@@ -965,6 +971,195 @@ class DatabaseHelper {
         // Column might already exist
       }
     }
+    if (oldVersion < 23) {
+      // Mark pre-installed vs user-created so we only remove seed data, never user data
+      try {
+        await db.execute(
+            'ALTER TABLE exercise_definitions ADD COLUMN is_preinstalled INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        // Column might already exist
+      }
+      // Remove only pre-installed exercises not in Excel; remove non-Excel muscles; re-seed Excel
+      await _replaceWithExcelSeedOnly(db);
+    }
+    if (oldVersion < 24) {
+      // Delete old pre-installed exercises by name (variants/spellings from before current Excel)
+      await _deleteOldPreinstalledExercisesByName(db);
+    }
+    if (oldVersion < 25) {
+      // Again delete old variants (Pushup/Pullup/Chinup etc.) so only Excel spelling remains
+      await _deleteOldPreinstalledExercisesByName(db);
+    }
+    if (oldVersion < 26) {
+      // Archer pushups (old spelling) and any remaining old-DB exercises with old anatomy body_part
+      await _deleteOldPreinstalledExercisesByName(db);
+      await _deleteExercisesWithOldBodyPart(db);
+    }
+  }
+
+  /// Old exercise names that were pre-installed (legacy/old seed or routine template variants) and are not in current Excel. Delete these.
+  /// Excel uses "Push Up", "Pull Up", "Chin Up", "Sit Up" etc.; old DB may have Pushup, Pullup, Chinup, Situp.
+  static const List<String> _oldPreinstalledExerciseNames = [
+    'Ab Rollout',
+    'Pushup',
+    'Pushups',
+    'Chinups',
+    'Chinup',
+    'Pullup',
+    'Pullups',
+    'Situp',
+    'Situps',
+    'Scapular Pushups',
+    'Scapular Pushup',
+    'Diamond Pushups',
+    'Diamond Pushup',
+    'Decline Pushups',
+    'Decline Pushup',
+    'Pike Pushups',
+    'Pike Pushup',
+    'Neutral Grip Pullups',
+    'Neutral Grip Pullup',
+    'One Towel Pullups',
+    'One Towel Pullup',
+    'Dead Hangs',
+    'Handstand Hold',
+    'Incline Dumbell Press',
+    'Knee to Bench Dumbell Row',
+    'Dumbbell Shrug',
+    'Resistance Band WoodChoppers',
+    'Bentover Lateral Raise',
+    'Dumbbell Lateral Raise',
+    'Cable Triceps Extension',
+    'Superman Snap-Ups',
+    'High-Knee Sprints',
+    'High-Heels Sprints',
+    'Sprinter Sit-Ups',
+    'Lying Windshield Wipers',
+    'Banded Face Pull',
+    'Banded Shoulder Press',
+    'Plyometric Pushups',
+    'Toe Raises',
+    'Glute Bridges',
+    'Slow Mountain Climbers',
+    'Wide Grip Australian Pullups',
+    'Hyperextensions',
+    'Z Bar Upright Row',
+    'Narrow Cable Row',
+    'Tricep Pushdowns',
+    "Farmer's Carry",
+    'Inverted Row',
+    'Resistance Band Pulls for Lats',
+    'Hip Thrusts',
+    'Reverse Hyperextensions',
+    'Resistance Band Lateral Raises',
+    'Grip Work',
+    'Plank with Thrusts',
+    'BW Hip Thrusts',
+    'Walking Lunges',
+    'Reverse Flies',
+    'Hand Grippers',
+    'Bird-Dog',
+    'Dead Bug',
+    'Full Range of Motion Leg Presses',
+    'Vacuum Breaths',
+    'Lying Leg Presses',
+    'Lat Pulldowns',
+    'Pullups',
+    'Plyometric Feet Elevated Bench Dips',
+    'Triceps Overhead Extension',
+    'Romanian Deadlifts',
+    'T-Bar Rows',
+    'Dumbbell Press',
+    'Incline Rows',
+    'Kettlebell Swings',
+    'Resistance Band RDL',
+    'Banded Boxing',
+    'Side to Side Turning Planks',
+    'Pelican Curl',
+    'Barbell Squats',
+    'Leg Raise',
+    'Dip',
+    'Dips',
+    'Squat',
+    'Squats',
+    'Lunge',
+    'Lunges',
+    'Curl',
+    'Curls',
+    'Press',
+    'Row',
+    'Rows',
+    'Archer pushups',
+    'Archer Pushups',
+  ];
+
+  /// Old anatomy body_part values from legacy DB (e.g. Pectoralis major). Excel uses simple names (Pecs, etc.). Delete pre-installed rows with these.
+  static const List<String> _oldBodyPartValues = [
+    'Pectoralis major',
+    'Pectoralis minor',
+    'Triceps Brachii',
+    'Biceps Brachii',
+    'Latissimus dorsi',
+    'Rhomboid major',
+    'Rhomboid minor',
+    'Trapezius',
+    'Anterior deltoid',
+    'Lateral deltoid',
+    'Posterior deltoid',
+    'Deltoid',
+  ];
+
+  Future<void> _deleteOldPreinstalledExercisesByName(Database db) async {
+    final allowedNow = prefilledExercises.map((e) => e.name).toSet();
+    for (final name in _oldPreinstalledExerciseNames) {
+      if (allowedNow.contains(name)) continue;
+      await db.delete(
+        'exercise_definitions',
+        where: 'name = ?',
+        whereArgs: [name],
+      );
+    }
+  }
+
+  Future<void> _deleteExercisesWithOldBodyPart(Database db) async {
+    for (final bodyPart in _oldBodyPartValues) {
+      await db.delete(
+        'exercise_definitions',
+        where: 'body_part = ?',
+        whereArgs: [bodyPart],
+      );
+    }
+  }
+
+  /// Removes only pre-installed exercise_definitions that are not in the Excel list (keeps user-created).
+  /// Removes muscles not in Excel list, then re-seeds Excel data.
+  Future<void> _replaceWithExcelSeedOnly(Database db) async {
+    final allowedExerciseNames = prefilledExercises.map((e) => e.name).toSet();
+    final allowedMuscleNames = prefilledMuscles.map((m) => m.name).toSet();
+
+    // Only delete pre-installed exercises not in Excel list. User-created (is_preinstalled=0) are never touched.
+    final allExercises = await db.query('exercise_definitions');
+    for (final row in allExercises) {
+      final isPreinstalled = (row['is_preinstalled'] as int? ?? 0) == 1;
+      if (!isPreinstalled) continue;
+      final name = row['name'] as String?;
+      if (name == null || !allowedExerciseNames.contains(name)) {
+        await db.delete('exercise_definitions', where: 'id = ?', whereArgs: [row['id']]);
+      }
+    }
+
+    // Delete muscles not in Excel list (CASCADE removes exercise_muscle_impact). Users do not create muscles.
+    final allMuscles = await db.query('muscles');
+    for (final row in allMuscles) {
+      final name = row['name'] as String?;
+      if (name == null || !allowedMuscleNames.contains(name)) {
+        await db.delete('muscles', where: 'id = ?', whereArgs: [row['id']]);
+      }
+    }
+
+    // Re-seed Excel muscles and exercises (insert uses ignore so no duplicates)
+    await _seedPrefilledMusclesForExcel(db);
+    await _seedPrefilledExercisesFromExcel(db);
   }
 
   /// Creates database indexes for performance optimization
@@ -1117,6 +1312,7 @@ class DatabaseHelper {
           'style': row.style,
           'types': null,
           'is_archived': 0,
+          'is_preinstalled': 1,
         },
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
@@ -1266,103 +1462,10 @@ class DatabaseHelper {
     ''');
   }
 
-  /// Seeds the muscles table with detailed anatomical data
-  Future<void> _seedMusclesTable(Database db) async {
-    final musclesData = [
-      // ARM GROUP
-      {'name': 'Triceps Brachii - Long Head', 'group': 'Arm'},
-      {'name': 'Triceps Brachii - Lateral Head', 'group': 'Arm'},
-      {'name': 'Triceps Brachii - Medial Head', 'group': 'Arm'},
-      {'name': 'Biceps Brachii - Long Head', 'group': 'Arm'},
-      {'name': 'Biceps Brachii - Short Head', 'group': 'Arm'},
-      {'name': 'Brachialis', 'group': 'Arm'},
-      {'name': 'Brachioradialis', 'group': 'Arm'},
-      {'name': 'Forearm Flexors', 'group': 'Arm'},
-      {'name': 'Forearm Extensors', 'group': 'Arm'},
-
-      // CHEST GROUP
-      {'name': 'Pectoralis Major - Clavicular Head', 'group': 'Chest'},
-      {'name': 'Pectoralis Major - Sternal Head', 'group': 'Chest'},
-      {'name': 'Pectoralis Major - Abdominal Head', 'group': 'Chest'},
-      {'name': 'Pectoralis Minor', 'group': 'Chest'},
-      {'name': 'Serratus Anterior', 'group': 'Chest'},
-
-      // SHOULDER GROUP
-      {'name': 'Anterior Deltoid', 'group': 'Shoulder'},
-      {'name': 'Lateral Deltoid', 'group': 'Shoulder'},
-      {'name': 'Posterior Deltoid', 'group': 'Shoulder'},
-      {'name': 'Supraspinatus', 'group': 'Shoulder'},
-      {'name': 'Infraspinatus', 'group': 'Shoulder'},
-      {'name': 'Teres Minor', 'group': 'Shoulder'},
-      {'name': 'Subscapularis', 'group': 'Shoulder'},
-
-      // BACK GROUP
-      {'name': 'Latissimus Dorsi', 'group': 'Back'},
-      {'name': 'Rhomboid Major', 'group': 'Back'},
-      {'name': 'Rhomboid Minor', 'group': 'Back'},
-      {'name': 'Middle Trapezius', 'group': 'Back'},
-      {'name': 'Upper Trapezius', 'group': 'Back'},
-      {'name': 'Lower Trapezius', 'group': 'Back'},
-      {'name': 'Teres Major', 'group': 'Back'},
-      {'name': 'Erector Spinae', 'group': 'Back'},
-      {'name': 'Multifidus', 'group': 'Back'},
-      {'name': 'Quadratus Lumborum', 'group': 'Back'},
-
-      // LEG GROUP - QUADRICEPS
-      {'name': 'Rectus Femoris', 'group': 'Leg'},
-      {'name': 'Vastus Lateralis', 'group': 'Leg'},
-      {'name': 'Vastus Medialis', 'group': 'Leg'},
-      {'name': 'Vastus Intermedius', 'group': 'Leg'},
-
-      // LEG GROUP - HAMSTRINGS
-      {'name': 'Biceps Femoris - Long Head', 'group': 'Leg'},
-      {'name': 'Biceps Femoris - Short Head', 'group': 'Leg'},
-      {'name': 'Semitendinosus', 'group': 'Leg'},
-      {'name': 'Semimembranosus', 'group': 'Leg'},
-
-      // LEG GROUP - GLUTES
-      {'name': 'Gluteus Maximus', 'group': 'Leg'},
-      {'name': 'Gluteus Medius', 'group': 'Leg'},
-      {'name': 'Gluteus Minimus', 'group': 'Leg'},
-
-      // LEG GROUP - CALVES
-      {'name': 'Gastrocnemius - Medial Head', 'group': 'Leg'},
-      {'name': 'Gastrocnemius - Lateral Head', 'group': 'Leg'},
-      {'name': 'Soleus', 'group': 'Leg'},
-      {'name': 'Tibialis Anterior', 'group': 'Leg'},
-      {'name': 'Tibialis Posterior', 'group': 'Leg'},
-      {'name': 'Peroneals', 'group': 'Leg'},
-
-      // LEG GROUP - HIP
-      {'name': 'Hip Flexors (Iliopsoas)', 'group': 'Leg'},
-      {'name': 'Hip Adductors', 'group': 'Leg'},
-      {'name': 'Hip Abductors', 'group': 'Leg'},
-
-      // CORE GROUP
-      {'name': 'Rectus Abdominis - Upper', 'group': 'Core'},
-      {'name': 'Rectus Abdominis - Lower', 'group': 'Core'},
-      {'name': 'External Obliques', 'group': 'Core'},
-      {'name': 'Internal Obliques', 'group': 'Core'},
-      {'name': 'Transverse Abdominis', 'group': 'Core'},
-      {'name': 'Multifidus (Core)', 'group': 'Core'},
-    ];
-
-    for (final muscle in musclesData) {
-      await db.insert(
-          'muscles',
-          {
-            'name': muscle['name'],
-            'group_name': muscle['group'],
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore);
-    }
-  }
-
   /// Migrates existing workout_logs data to the new Bio-Mechanic System structure
   Future<void> _migrateToBioMechanicSystem(Database db) async {
-    // Step 1: Create new tables
+    // Step 1: Create new tables (no old muscle seed – only prefilled from Excel later)
     await _createBioMechanicTables(db);
-    await _seedMusclesTable(db);
 
     // Step 2: Enhance exercise_definitions table
     try {
@@ -1435,30 +1538,18 @@ class DatabaseHelper {
           final reps = oldLog['reps'] as int? ?? 10;
           final weight = oldLog['weight'] as double?;
 
-          // Find or create exercise_definition for this exercise
-          int exerciseId;
+          // Only link to existing exercise_definitions (Excel prefilled). Do not create new ones.
           final existingExercise = await db.query(
             'exercise_definitions',
             where: 'name = ?',
             whereArgs: [exerciseName],
             limit: 1,
           );
+          if (existingExercise.isEmpty) continue;
 
-          if (existingExercise.isNotEmpty) {
-            exerciseId = existingExercise.first['id'] as int;
-          } else {
-            // Create exercise definition if it doesn't exist (from legacy data)
-            exerciseId = await db.insert('exercise_definitions', {
-              'name': exerciseName,
-              'default_type': oldLog['exercise_type'] as String?,
-              'body_part': null,
-              'types': null,
-              'is_archived': 0,
-            });
-          }
+          final exerciseId = existingExercise.first['id'] as int;
 
           // Create individual set records
-          // If old log had sets=3, reps=10, we create 3 sets with 10 reps each
           for (int setNum = 1; setNum <= sets; setNum++) {
             await db.insert('workout_logs_v18', {
               'session_id': sessionId,

@@ -55,6 +55,50 @@ class ShoppingSettingsSheet extends StatelessWidget {
                         .withValues(alpha: 0.6),
                   ),
             ),
+            const Divider(height: 32),
+            ListTile(
+              leading: Icon(Icons.restart_alt, color: Theme.of(context).colorScheme.error),
+              title: const Text('Start from scratch'),
+              subtitle: const Text(
+                'Delete all shopping items. Does not affect Balance Sheet.',
+              ),
+              onTap: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Start from scratch'),
+                    content: const Text(
+                      'This will permanently delete all shopping items '
+                      '(unpurchased and purchased). This cannot be undone. Continue?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(ctx).colorScheme.error,
+                        ),
+                        child: const Text('Reset all'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm == true && context.mounted) {
+                  await vm.resetAll();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Shopping list has been reset.'),
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
           ],
         ),
       ),

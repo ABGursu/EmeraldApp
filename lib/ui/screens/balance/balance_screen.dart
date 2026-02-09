@@ -52,6 +52,58 @@ class BalanceScreen extends StatelessWidget {
                   }
                 },
               ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) async {
+                  if (value == 'reset') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Start from scratch'),
+                        content: const Text(
+                          'This will permanently delete all transactions and '
+                          'budget goals. Your tags will be kept. This cannot be undone. Continue?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(ctx).colorScheme.error,
+                            ),
+                            child: const Text('Reset all'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && context.mounted) {
+                      await vm.resetAll();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Balance sheet has been reset.'),
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'reset',
+                    child: Row(
+                      children: [
+                        Icon(Icons.restart_alt),
+                        SizedBox(width: 12),
+                        Text('Start from scratch'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           body: vm.isLoading

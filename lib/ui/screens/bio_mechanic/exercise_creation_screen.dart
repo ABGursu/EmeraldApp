@@ -499,88 +499,108 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
   void _showAddMuscleDialog(BuildContext context, BioMechanicViewModel vm) {
     int? selectedMuscleId;
     int selectedScore = 5;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxW = (screenWidth * 0.9).clamp(280.0, 360.0);
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Add Muscle Impact'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Muscle Selection
-                DropdownButtonFormField<int>(
-                  decoration: const InputDecoration(
-                    labelText: 'Muscle',
-                    border: OutlineInputBorder(),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Add Muscle Impact'),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            content: SizedBox(
+              width: maxW,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  maxWidth: maxW,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Muscle Selection
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Muscle',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        value: selectedMuscleId,
+                        hint: const Text('Select muscle', overflow: TextOverflow.ellipsis),
+                        items: vm.muscles.map((muscle) {
+                          return DropdownMenuItem<int>(
+                            value: muscle.id,
+                            child: Text(
+                              '${muscle.name} (${muscle.groupName})',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() => selectedMuscleId = value);
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                    // Impact Score
+                    Text(
+                      'Impact Score: $selectedScore',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Slider(
+                      value: selectedScore.toDouble(),
+                      min: 1,
+                      max: 10,
+                      divisions: 9,
+                      label: '$selectedScore',
+                      onChanged: (value) {
+                        setState(() => selectedScore = value.toInt());
+                      },
+                    ),
+                      Text(
+                        '1 = Minimal impact, 10 = Primary target',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                  initialValue: selectedMuscleId,
-                  items: vm.muscles.map((muscle) {
-                    return DropdownMenuItem(
-                      value: muscle.id,
-                      child: Text('${muscle.name} (${muscle.groupName})'),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => selectedMuscleId = value);
-                  },
                 ),
-                const SizedBox(height: 16),
-                // Impact Score
-                Text(
-                  'Impact Score: $selectedScore',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                Slider(
-                  value: selectedScore.toDouble(),
-                  min: 1,
-                  max: 10,
-                  divisions: 9,
-                  label: '$selectedScore',
-                  onChanged: (value) {
-                    setState(() => selectedScore = value.toInt());
-                  },
-                ),
-                Text(
-                  '1 = Minimal impact, 10 = Primary target',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: selectedMuscleId == null
-                  ? null
-                  : () {
-                      final exerciseId = widget.exercise?.id ?? 0;
-                      final impact = ExerciseMuscleImpactModel(
-                        exerciseId: exerciseId,
-                        muscleId: selectedMuscleId!,
-                        impactScore: selectedScore,
-                      );
-                      setState(() {
-                        // Check if muscle already exists
-                        final existingIndex = _muscleImpacts.indexWhere(
-                          (i) => i.muscleId == selectedMuscleId,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: selectedMuscleId == null
+                    ? null
+                    : () {
+                        final exerciseId = widget.exercise?.id ?? 0;
+                        final impact = ExerciseMuscleImpactModel(
+                          exerciseId: exerciseId,
+                          muscleId: selectedMuscleId!,
+                          impactScore: selectedScore,
                         );
-                        if (existingIndex >= 0) {
-                          _muscleImpacts[existingIndex] = impact;
-                        } else {
-                          _muscleImpacts.add(impact);
-                        }
-                      });
-                      Navigator.pop(context);
-                    },
-              child: const Text('Add'),
-            ),
-          ],
-        ),
+                        setState(() {
+                          final existingIndex = _muscleImpacts.indexWhere(
+                            (i) => i.muscleId == selectedMuscleId,
+                          );
+                          if (existingIndex >= 0) {
+                            _muscleImpacts[existingIndex] = impact;
+                          } else {
+                            _muscleImpacts.add(impact);
+                          }
+                        });
+                        Navigator.pop(dialogContext);
+                      },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

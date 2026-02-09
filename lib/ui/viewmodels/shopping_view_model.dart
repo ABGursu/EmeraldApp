@@ -60,6 +60,13 @@ class ShoppingViewModel extends ChangeNotifier {
     await loadSettings();
   }
 
+  /// Deletes all shopping items. Use for "start from scratch".
+  Future<void> resetAll() async {
+    await _repository.resetAll();
+    _items = [];
+    notifyListeners();
+  }
+
   Future<void> loadItems() async {
     _loading = true;
     notifyListeners();

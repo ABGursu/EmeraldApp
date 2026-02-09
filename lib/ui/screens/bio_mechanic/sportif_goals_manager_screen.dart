@@ -96,29 +96,19 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           maxLines: 2,
                         ),
-                      if (goal.styles.isNotEmpty || goal.types.isNotEmpty) ...[
+                      if (goal.types.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Wrap(
                           spacing: 4,
                           runSpacing: 4,
-                          children: [
-                            ...goal.styles.map(
-                              (s) => Chip(
-                                label: Text(
-                                  s,
-                                  style: const TextStyle(fontSize: 10),
-                                ),
+                          children: goal.types.map(
+                            (t) => Chip(
+                              label: Text(
+                                t,
+                                style: const TextStyle(fontSize: 10),
                               ),
                             ),
-                            ...goal.types.map(
-                              (t) => Chip(
-                                label: Text(
-                                  t,
-                                  style: const TextStyle(fontSize: 10),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ).toList(),
                         ),
                       ],
                     ],
@@ -163,15 +153,8 @@ class SportifGoalsManagerScreen extends StatelessWidget {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
 
-    // Collect available styles and types from exercise definitions
+    // Collect available types from exercise definitions (Sports Goals use types only, not style)
     final definitions = vm.exerciseDefinitions;
-    final availableStyles = definitions
-        .map((e) => e.style)
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
     final availableTypes = definitions
         .expand((e) => e.types)
         .where((t) => t.trim().isNotEmpty)
@@ -179,7 +162,6 @@ class SportifGoalsManagerScreen extends StatelessWidget {
         .toList()
       ..sort();
 
-    final selectedStyles = <String>[];
     final selectedTypes = <String>[];
 
     showDialog<void>(
@@ -215,37 +197,6 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                       textCapitalization: TextCapitalization.sentences,
                     ),
                     const SizedBox(height: 16),
-                    if (availableStyles.isNotEmpty) ...[
-                      Text(
-                        'Linked Exercise Styles',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: availableStyles.map((style) {
-                          final isSelected = selectedStyles.contains(style);
-                          return FilterChip(
-                            label: Text(
-                              style,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  selectedStyles.add(style);
-                                } else {
-                                  selectedStyles.remove(style);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
                     if (availableTypes.isNotEmpty) ...[
                       Text(
                         'Linked Exercise Types',
@@ -295,7 +246,7 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                           : null,
                       isArchived: false,
                       createdAt: DateTime.now(),
-                      styles: selectedStyles,
+                      styles: const [], // Sports Goals use types only
                       types: selectedTypes,
                     );
                     await vm.createGoal(goal);
@@ -322,15 +273,8 @@ class SportifGoalsManagerScreen extends StatelessWidget {
     final descriptionController =
         TextEditingController(text: goal.description ?? '');
 
-    // Collect available styles and types from exercise definitions
+    // Collect available types from exercise definitions (Sports Goals use types only)
     final definitions = vm.exerciseDefinitions;
-    final availableStyles = definitions
-        .map((e) => e.style)
-        .whereType<String>()
-        .where((s) => s.trim().isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
     final availableTypes = definitions
         .expand((e) => e.types)
         .where((t) => t.trim().isNotEmpty)
@@ -338,7 +282,6 @@ class SportifGoalsManagerScreen extends StatelessWidget {
         .toList()
       ..sort();
 
-    final selectedStyles = List<String>.from(goal.styles);
     final selectedTypes = List<String>.from(goal.types);
 
     showDialog<void>(
@@ -373,37 +316,6 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                       textCapitalization: TextCapitalization.sentences,
                     ),
                     const SizedBox(height: 16),
-                    if (availableStyles.isNotEmpty) ...[
-                      Text(
-                        'Linked Exercise Styles',
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: availableStyles.map((style) {
-                          final isSelected = selectedStyles.contains(style);
-                          return FilterChip(
-                            label: Text(
-                              style,
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  selectedStyles.add(style);
-                                } else {
-                                  selectedStyles.remove(style);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
                     if (availableTypes.isNotEmpty) ...[
                       Text(
                         'Linked Exercise Types',
@@ -450,7 +362,7 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                       description: descriptionController.text.trim().isNotEmpty
                           ? descriptionController.text.trim()
                           : null,
-                      styles: selectedStyles,
+                      styles: const [], // Sports Goals use types only
                       types: selectedTypes,
                     );
                     await vm.updateGoal(updated);
@@ -543,13 +455,13 @@ class _SportifGoalDetailScreenState extends State<SportifGoalDetailScreen> {
             children: [
               _buildDateRangeSelector(context),
               const Divider(height: 1),
-              if (widget.goal.styles.isEmpty && widget.goal.types.isEmpty)
+              if (widget.goal.types.isEmpty)
                 Expanded(
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'This goal has no linked exercise styles or types yet.\n\nEdit the goal to attach styles/types so we can track which exercises contribute to it.',
+                        'This goal has no linked exercise types yet.\n\nEdit the goal to attach types so we can track which exercises contribute to it.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -708,15 +620,9 @@ class _SportifGoalDetailScreenState extends State<SportifGoalDetailScreen> {
                           spacing: 6,
                           runSpacing: 4,
                           children: entry.exercises.map((ex) {
-                            final meta = <String>[];
-                            if (ex.style != null && ex.style!.isNotEmpty) {
-                              meta.add(ex.style!);
-                            }
-                            if (ex.types.isNotEmpty) {
-                              meta.addAll(ex.types);
-                            }
-                            final subtitle =
-                                meta.isNotEmpty ? ' (${meta.join(', ')})' : '';
+                            final subtitle = ex.types.isNotEmpty
+                                ? ' (${ex.types.join(', ')})'
+                                : '';
                             return Chip(
                               label: Text(
                                 '${ex.name}$subtitle',

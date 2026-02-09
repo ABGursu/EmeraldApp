@@ -55,5 +55,11 @@ class SqlShoppingRepository implements IShoppingRepository {
     if (maps.isEmpty) return null;
     return ShoppingItemModel.fromMap(maps.first);
   }
+
+  @override
+  Future<void> resetAll() async {
+    final db = await _dbHelper.database;
+    await db.delete('shopping_items');
+  }
 }
 

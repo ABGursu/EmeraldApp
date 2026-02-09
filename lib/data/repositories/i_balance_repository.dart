@@ -14,5 +14,8 @@ abstract class IBalanceRepository {
 
   Future<void> setBudget(String monthYear, double amount);
   Future<double?> getBudget(String monthYear);
+
+  /// Deletes all transactions and budget goals. Tags are kept. Use for "start from scratch".
+  Future<void> resetAll();
 }
 

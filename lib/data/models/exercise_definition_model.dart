@@ -13,13 +13,16 @@ class ExerciseDefinition {
   /// Optional grip description from Excel (e.g. "Supinated", "Neutral", "Wide")
   final String? grip;
 
-  /// Optional style/stance description from Excel (e.g. "Close Stance", "Paused")
+  /// Style: from Excel, how the exercise is performed (e.g. "Close Stance", "Paused"). Not used for Sports Goals.
   final String? style;
 
-  /// Multi-select exercise type tags (Strength, Balance, etc.)
+  /// Types: in-app tags (e.g. Strength, Balance). Sports Goals use only types to link and track contributing exercises.
   final List<String> types;
 
   final bool isArchived;
+
+  /// True if this row was inserted by app seed (Excel prefilled). False for user-created. Used so upgrades only remove pre-installed data.
+  final bool isPreinstalled;
 
   const ExerciseDefinition({
     required this.id,
@@ -30,6 +33,7 @@ class ExerciseDefinition {
     this.style,
     this.types = const [],
     this.isArchived = false,
+    this.isPreinstalled = false,
   });
 
   ExerciseDefinition copyWith({
@@ -41,6 +45,7 @@ class ExerciseDefinition {
     String? style,
     List<String>? types,
     bool? isArchived,
+    bool? isPreinstalled,
   }) {
     return ExerciseDefinition(
       id: id ?? this.id,
@@ -51,6 +56,7 @@ class ExerciseDefinition {
       style: style ?? this.style,
       types: types ?? this.types,
       isArchived: isArchived ?? this.isArchived,
+      isPreinstalled: isPreinstalled ?? this.isPreinstalled,
     );
   }
 
@@ -63,6 +69,7 @@ class ExerciseDefinition {
         'style': style,
         'types': types.isEmpty ? null : ExerciseType.toJsonString(types),
         'is_archived': isArchived ? 1 : 0,
+        'is_preinstalled': isPreinstalled ? 1 : 0,
       };
 
   factory ExerciseDefinition.fromMap(Map<String, dynamic> map) {
@@ -75,6 +82,7 @@ class ExerciseDefinition {
       style: map['style'] as String?,
       types: ExerciseType.fromJsonString(map['types'] as String?),
       isArchived: (map['is_archived'] as int? ?? 0) == 1,
+      isPreinstalled: (map['is_preinstalled'] as int? ?? 0) == 1,
     );
   }
 }
