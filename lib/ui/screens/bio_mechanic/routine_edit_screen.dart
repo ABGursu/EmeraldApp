@@ -203,6 +203,7 @@ class _RoutineEditScreenState extends State<RoutineEditScreen> {
       },
     );
     if (chosen == null || !mounted) return;
+    if (!context.mounted) return;
 
     final saved = await showDialog<bool>(
       context: context,

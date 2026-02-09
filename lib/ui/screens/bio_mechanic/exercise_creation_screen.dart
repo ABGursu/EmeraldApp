@@ -6,7 +6,7 @@ import '../../../data/models/exercise_definition_model.dart';
 import '../../../data/models/exercise_muscle_impact_model.dart';
 import '../../../data/models/muscle_model.dart';
 import '../../widgets/quick_filter_bar.dart';
-import 'exercise_type.dart';
+import '../../../data/models/exercise_type.dart';
 
 /// Exercise Creation Screen - Bio-Mechanic Lab for creating/editing exercises with muscle impacts.
 class ExerciseCreationScreen extends StatelessWidget {
@@ -471,17 +471,33 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
                             muscle.groupName,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              setState(() {
-                                _muscleImpacts.removeWhere(
-                                  (i) =>
-                                      i.muscleId == impact.muscleId &&
-                                      i.exerciseId == impact.exerciseId,
-                                );
-                              });
-                            },
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Edit impact score',
+                                onPressed: () => _showEditMuscleImpactDialog(
+                                  context,
+                                  vm,
+                                  impact,
+                                  muscle.name,
+                                  setState,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  setState(() {
+                                    _muscleImpacts.removeWhere(
+                                      (i) =>
+                                          i.muscleId == impact.muscleId &&
+                                          i.exerciseId == impact.exerciseId,
+                                    );
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       );
@@ -492,6 +508,81 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _saveExercise(context, vm),
         child: const Icon(Icons.save),
+      ),
+    );
+  }
+
+  void _showEditMuscleImpactDialog(
+    BuildContext context,
+    BioMechanicViewModel vm,
+    ExerciseMuscleImpactModel impact,
+    String muscleName,
+    void Function(void Function()) updateParentState,
+  ) {
+    int selectedScore = impact.impactScore;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxW = (screenWidth * 0.9).clamp(280.0, 360.0);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Text('Edit impact: $muscleName'),
+            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+            content: SizedBox(
+              width: maxW,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Impact Score: $selectedScore',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Slider(
+                    value: selectedScore.toDouble(),
+                    min: 1,
+                    max: 10,
+                    divisions: 9,
+                    label: '$selectedScore',
+                    onChanged: (value) {
+                      setDialogState(() => selectedScore = value.toInt());
+                    },
+                  ),
+                  Text(
+                    '1 = Minimal impact, 10 = Primary target',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  updateParentState(() {
+                    final idx = _muscleImpacts.indexWhere(
+                      (i) =>
+                          i.muscleId == impact.muscleId &&
+                          i.exerciseId == impact.exerciseId,
+                    );
+                    if (idx >= 0) {
+                      _muscleImpacts[idx] = impact.copyWith(
+                        impactScore: selectedScore,
+                      );
+                    }
+                  });
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -529,7 +620,7 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        value: selectedMuscleId,
+                        initialValue: selectedMuscleId,
                         hint: const Text('Select muscle', overflow: TextOverflow.ellipsis),
                         items: vm.muscles.map((muscle) {
                           return DropdownMenuItem<int>(

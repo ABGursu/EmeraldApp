@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 26;
+  static const int _dbVersion = 27;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -995,6 +995,37 @@ class DatabaseHelper {
       await _deleteOldPreinstalledExercisesByName(db);
       await _deleteExercisesWithOldBodyPart(db);
     }
+    if (oldVersion < 27) {
+      // Ensure is_preinstalled exists (older DBs may not have it)
+      try {
+        await db.execute(
+          'ALTER TABLE exercise_definitions ADD COLUMN is_preinstalled INTEGER NOT NULL DEFAULT 0',
+        );
+        // New column: treat all existing rows as preinstalled so we wipe and re-seed
+        await db.execute('UPDATE exercise_definitions SET is_preinstalled = 1');
+      } catch (_) {
+        // Column already exists
+      }
+      // One-time: remove all preinstalled exercises and re-seed from Excel only (153 exercises).
+      await _wipePreinstalledAndReseedFromExcel(db);
+    }
+  }
+
+  /// One-time reset: delete all preinstalled exercises and their muscle impacts, then re-seed from Excel (153).
+  Future<void> _wipePreinstalledAndReseedFromExcel(Database db) async {
+    final preinstalledIds = await db.query(
+      'exercise_definitions',
+      columns: ['id'],
+      where: 'is_preinstalled = ?',
+      whereArgs: [1],
+    );
+    for (final row in preinstalledIds) {
+      final id = row['id'] as int?;
+      if (id == null) continue;
+      await db.delete('exercise_muscle_impact', where: 'exercise_id = ?', whereArgs: [id]);
+    }
+    await db.delete('exercise_definitions', where: 'is_preinstalled = ?', whereArgs: [1]);
+    await _seedPrefilledExercisesFromExcel(db);
   }
 
   /// Old exercise names that were pre-installed (legacy/old seed or routine template variants) and are not in current Excel. Delete these.
@@ -1171,11 +1202,7 @@ class DatabaseHelper {
       ON transactions(date)
     ''');
 
-    // Index on workout_logs.date for date-based queries
-    await db.execute('''
-      CREATE INDEX IF NOT EXISTS idx_workout_logs_date 
-      ON workout_logs(date)
-    ''');
+    // workout_logs has no date column (date is on workout_sessions); index removed to avoid invalid schema.
 
     // Composite index on habit_logs for queries filtering by both date and habit_id
     await db.execute('''
@@ -1269,25 +1296,36 @@ class DatabaseHelper {
     }
     if (lower.contains('dumbbell') ||
         lower.contains('db ') ||
-        lower.contains('dumbell')) return 'Dumbbell';
+        lower.contains('dumbell')) {
+      return 'Dumbbell';
+    }
     if (lower.contains('cable') ||
         lower.contains('pulldown') ||
         lower.contains('pushdown') ||
         lower.contains('face pull') ||
-        lower.contains('woodchopper')) return 'Cable';
+        lower.contains('woodchopper')) {
+      return 'Cable';
+    }
     if (lower.contains('barbell') ||
         lower.contains('bb ') ||
-        lower.contains('t-bar')) return 'Barbell';
+        lower.contains('t-bar')) {
+      return 'Barbell';
+    }
     if (lower.contains('machine') ||
         lower.contains('smith machine') ||
         lower.contains('leg press') ||
         lower.contains('assisted') ||
-        lower.contains('preacher curl')) return 'Machine';
+        lower.contains('preacher curl')) {
+      return 'Machine';
+    }
     if (lower.contains('resistance band') ||
         lower.contains('banded') ||
-        lower.contains('band ')) return 'Resistance Band';
-    if (lower.contains('kettlebell') || lower.contains('kb '))
+        lower.contains('band ')) {
+      return 'Resistance Band';
+    }
+    if (lower.contains('kettlebell') || lower.contains('kb ')) {
       return 'Kettlebell';
+    }
     return null;
   }
 

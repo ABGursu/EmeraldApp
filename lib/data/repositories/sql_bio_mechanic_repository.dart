@@ -155,19 +155,6 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   }
 
   @override
-  Future<List<ExerciseMuscleImpactModel>> getExercisesForMuscle(
-      int muscleId) async {
-    final db = await _dbHelper.database;
-    final result = await db.query(
-      'exercise_muscle_impact',
-      where: 'muscle_id = ?',
-      whereArgs: [muscleId],
-      orderBy: 'impact_score DESC',
-    );
-    return result.map((map) => ExerciseMuscleImpactModel.fromMap(map)).toList();
-  }
-
-  @override
   Future<void> setExerciseMuscleImpacts(
     int exerciseId,
     List<ExerciseMuscleImpactModel> impacts,

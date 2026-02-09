@@ -620,7 +620,7 @@ class BioMechanicViewModel extends ChangeNotifier {
         ..sort((a, b) => a.compareTo(b));
 
       for (final day in sortedDates) {
-        buffer.writeln('${formatDate(day)}');
+        buffer.writeln(formatDate(day));
         buffer.writeln('----------------------------------------');
 
         final daySessions = sessionsByDate[day]!;
@@ -737,8 +737,4 @@ class BioMechanicViewModel extends ChangeNotifier {
     return await _repository.getExerciseWithImpacts(exerciseId);
   }
 
-  /// Get exercises that target a specific muscle
-  Future<List<ExerciseWithImpact>> getExercisesForMuscle(int muscleId) async {
-    return await _repository.getExercisesForMuscleWithScores(muscleId);
-  }
 }

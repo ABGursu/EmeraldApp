@@ -28,7 +28,6 @@ abstract class IBioMechanicRepository {
   // === Exercise Muscle Impact (Bio-Mechanic Engine) ===
   Future<List<ExerciseMuscleImpactModel>> getMuscleImpactsForExercise(
       int exerciseId);
-  Future<List<ExerciseMuscleImpactModel>> getExercisesForMuscle(int muscleId);
   Future<void> setExerciseMuscleImpacts(
     int exerciseId,
     List<ExerciseMuscleImpactModel> impacts,
