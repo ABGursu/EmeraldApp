@@ -609,8 +609,16 @@ class _TransactionTile extends StatelessWidget {
     final isExpense = transaction.amount < 0;
     return ListTile(
       leading: CircleAvatar(backgroundColor: Color(colorValue)),
-      title: Text(tagName),
-      subtitle: Text(transaction.note ?? ''),
+      title: Text(
+        tagName,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+      ),
+      subtitle: Text(
+        transaction.note ?? '',
+        overflow: TextOverflow.ellipsis,
+        maxLines: 2,
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

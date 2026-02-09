@@ -171,7 +171,11 @@ class ExerciseCreationScreen extends StatelessWidget {
                         spacing: 4,
                         children: exercise.types.map((type) {
                           return Chip(
-                            label: Text(type),
+                            label: Text(
+                              type,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                             labelStyle: const TextStyle(fontSize: 10),
                             padding: EdgeInsets.zero,
                           );
@@ -233,7 +237,11 @@ class ExerciseCreationScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Exercise'),
-        content: Text('Are you sure you want to delete "${exercise.name}"?'),
+        content: Text(
+          'Are you sure you want to delete "${exercise.name}"?',
+          overflow: TextOverflow.ellipsis,
+          maxLines: 5,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -387,7 +395,11 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
                     children: ExerciseType.all.map((type) {
                       final isSelected = _selectedTypes.contains(type);
                       return FilterChip(
-                        label: Text(type),
+                        label: Text(
+                          type,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                         selected: isSelected,
                         onSelected: (selected) {
                           setState(() {
@@ -528,7 +540,11 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: Text('Edit impact: $muscleName'),
+            title: Text(
+              'Edit impact: $muscleName',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
             contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
             content: SizedBox(
               width: maxW,
@@ -628,6 +644,7 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
                             child: Text(
                               '${muscle.name} (${muscle.groupName})',
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           );
                         }).toList(),

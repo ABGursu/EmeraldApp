@@ -210,8 +210,16 @@ class _RoutineTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        title: Text(routine.name),
-        subtitle: const Text('Tap to edit'),
+        title: Text(
+          routine.name,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
+        ),
+        subtitle: const Text(
+          'Tap to edit',
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'edit') onTap();

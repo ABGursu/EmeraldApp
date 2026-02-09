@@ -212,6 +212,8 @@ class _ShoppingItemTile extends StatelessWidget {
                 ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
                 : null,
           ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 2,
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,7 +235,11 @@ class _ShoppingItemTile extends StatelessWidget {
                 ],
               ),
             ] else ...[
-              Text('Est: ${item.estimatedPrice.toStringAsFixed(2)}'),
+              Text(
+                'Est: ${item.estimatedPrice.toStringAsFixed(2)}',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
             ],
             if (item.quantity != null) Text('Qty: ${item.quantity}'),
             if (item.note != null && item.note!.isNotEmpty)

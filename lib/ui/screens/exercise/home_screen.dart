@@ -405,14 +405,36 @@ class _WorkoutLogCard extends StatelessWidget {
             style: TextStyle(
               decoration: log.isCompleted ? TextDecoration.lineThrough : null,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (log.exerciseType != null) Text('Type: ${log.exerciseType}'),
-              Text('${log.sets}x${log.reps}'),
-              if (log.weight != null) Text('Weight: ${log.weight} kg'),
-              if (log.note != null) Text('Note: ${log.note}'),
+              if (log.exerciseType != null)
+                Text(
+                  'Type: ${log.exerciseType}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              Text(
+                '${log.sets}x${log.reps}',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              if (log.weight != null)
+                Text(
+                  'Weight: ${log.weight} kg',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              if (log.note != null)
+                Text(
+                  'Note: ${log.note}',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
             ],
           ),
           trailing: IconButton(
@@ -528,9 +550,17 @@ class _ExerciseSelectorDialogState extends State<_ExerciseSelectorDialog> {
                             itemBuilder: (context, index) {
                               final def = _filteredDefinitions[index];
                               return ListTile(
-                                title: Text(def.name),
+                                title: Text(
+                                  def.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
                                 subtitle: def.defaultType != null
-                                    ? Text('Type: ${def.defaultType}')
+                                    ? Text(
+                                        'Type: ${def.defaultType}',
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      )
                                     : null,
                                 onTap: () => widget.onSelect(def),
                               );

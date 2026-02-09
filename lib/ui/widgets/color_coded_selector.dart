@@ -77,12 +77,20 @@ class ColorCodedSelectorFormField extends FormField<ColorCodedItem?> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (selected != null)
-                          Row(
-                            children: [
-                              _ColorDot(colorValue: selected.colorValue),
-                              const SizedBox(width: 8),
-                              Text(selected.name),
-                            ],
+                          Expanded(
+                            child: Row(
+                              children: [
+                                _ColorDot(colorValue: selected.colorValue),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    selected.name,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
                           )
                         else
                           const Text('Select...'),

@@ -105,7 +105,11 @@ class ExerciseLibraryScreen extends StatelessWidget {
                                   margin:
                                       const EdgeInsets.symmetric(vertical: 4),
                                   child: ListTile(
-                                    title: Text(definition.name),
+                                    title: Text(
+                                      definition.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
                                     subtitle: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,

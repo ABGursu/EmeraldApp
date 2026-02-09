@@ -112,9 +112,16 @@ class _RoutineEditScreenState extends State<RoutineEditScreen> {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        title: Text(name),
+                        title: Text(
+                          name,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                         subtitle: Text(
-                            '${item.targetSets} set x ${item.targetReps} tekrar'),
+                            '${item.targetSets} set x ${item.targetReps} tekrar',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () => _deleteItem(vm, item),
@@ -193,7 +200,11 @@ class _RoutineEditScreenState extends State<RoutineEditScreen> {
               itemBuilder: (_, i) {
                 final ex = list[i];
                 return ListTile(
-                  title: Text(ex.name),
+                  title: Text(
+                    ex.name,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                   onTap: () => Navigator.pop(ctx, ex),
                 );
               },

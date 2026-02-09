@@ -73,12 +73,18 @@ class DailyLoggerScreen extends StatelessWidget {
               }
             },
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  formatDate(vm.selectedDate),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    formatDate(vm.selectedDate),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
                 if (vm.selectedDate.year == DateTime.now().year &&
                     vm.selectedDate.month == DateTime.now().month &&
@@ -86,6 +92,7 @@ class DailyLoggerScreen extends StatelessWidget {
                   Text(
                     'Today',
                     style: Theme.of(context).textTheme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
                   ),
               ],
             ),
@@ -166,8 +173,11 @@ class DailyLoggerScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.add_circle_outline),
               title: const Text('Empty workout'),
-              subtitle:
-                  const Text('Create a new session with title and goal tags'),
+              subtitle: const Text(
+                'Create a new session with title and goal tags',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _showAddSessionDialog(context);
@@ -176,8 +186,11 @@ class DailyLoggerScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.list_alt),
               title: const Text('Start from routine'),
-              subtitle:
-                  const Text('Create a session for today from a saved routine'),
+              subtitle: const Text(
+                'Create a session for today from a saved routine',
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
               onTap: () {
                 Navigator.pop(ctx);
                 _showStartFromRoutineDialog(context);

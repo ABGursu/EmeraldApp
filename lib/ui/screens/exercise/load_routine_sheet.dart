@@ -48,9 +48,16 @@ class LoadRoutineSheet extends StatelessWidget {
                   final routine = libraryVm.routines[index];
                   return ListTile(
                     leading: const Icon(Icons.playlist_play),
-                    title: Text(routine.name),
+                    title: Text(
+                      routine.name,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
                     subtitle: Text(
-                        'Created: ${routine.createdAt.day}.${routine.createdAt.month}.${routine.createdAt.year}'),
+                      'Created: ${routine.createdAt.day}.${routine.createdAt.month}.${routine.createdAt.year}',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                     onTap: () async {
                       Navigator.of(context).pop();
                       await dailyVm.loadRoutine(routine.id);

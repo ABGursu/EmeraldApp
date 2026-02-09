@@ -81,9 +81,16 @@ class RoutineManagerScreen extends StatelessWidget {
                                   margin: const EdgeInsets.symmetric(vertical: 4),
                                   child: ListTile(
                                     leading: const Icon(Icons.playlist_play),
-                                    title: Text(routine.name),
+                                    title: Text(
+                                      routine.name,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
                                     subtitle: Text(
-                                        'Created: ${routine.createdAt.day}.${routine.createdAt.month}.${routine.createdAt.year}'),
+                                      'Created: ${routine.createdAt.day}.${routine.createdAt.month}.${routine.createdAt.year}',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
                                     trailing: IconButton(
                                       icon: const Icon(Icons.delete, color: Colors.red),
                                       onPressed: () => _showDeleteDialog(
@@ -162,7 +169,11 @@ class RoutineManagerScreen extends StatelessWidget {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(routine.name),
+          title: Text(
+            routine.name,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+          ),
           content: SizedBox(
             width: double.maxFinite,
             child: items.isEmpty
@@ -175,8 +186,16 @@ class RoutineManagerScreen extends StatelessWidget {
                       final def = defMap[item.exerciseDefinitionId];
                       return ListTile(
                         leading: Text('${index + 1}.'),
-                        title: Text(def?.name ?? 'Unknown'),
-                        subtitle: Text('${item.targetSets}x${item.targetReps}'),
+                        title: Text(
+                          def?.name ?? 'Unknown',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                        subtitle: Text(
+                          '${item.targetSets}x${item.targetReps}',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
                       );
                     },
                   ),

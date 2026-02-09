@@ -59,7 +59,11 @@ class QuickFilterBar<T> extends StatelessWidget {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
-                label: Text(allOptionLabel),
+                label: Text(
+                  allOptionLabel,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
                 selected: selectedItem == null,
                 onSelected: (selected) {
                   if (selected) {
@@ -87,6 +91,8 @@ class QuickFilterBar<T> extends StatelessWidget {
                 label: Text(
                   itemName,
                   style: const TextStyle(fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 selected: isSelected,
                 onSelected: (selected) {

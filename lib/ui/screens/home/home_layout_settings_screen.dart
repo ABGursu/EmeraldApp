@@ -135,6 +135,8 @@ class _MenuItemTile extends StatelessWidget {
                       ? null
                       : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ],
@@ -165,6 +167,8 @@ class _MenuItemTile extends StatelessWidget {
                       .onSurface
                       .withValues(alpha: 0.6),
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               )
             : null,
         // Make the entire tile draggable

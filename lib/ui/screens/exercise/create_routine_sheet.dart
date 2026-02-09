@@ -88,7 +88,11 @@ class _CreateRoutineSheetState extends State<CreateRoutineSheet> {
                             .any((e) => e['exerciseDefinitionId'] == def.id);
 
                         return CheckboxListTile(
-                          title: Text(def.name),
+                          title: Text(
+                            def.name,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
                           subtitle: def.defaultType != null
                               ? Text('Type: ${def.defaultType}')
                               : null,

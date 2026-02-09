@@ -287,6 +287,8 @@ class HabitHubScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
               const SizedBox(height: 4),
               Text(
@@ -298,6 +300,8 @@ class HabitHubScreen extends StatelessWidget {
                           .withValues(alpha: 0.6),
                     ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),

@@ -207,7 +207,11 @@ class _AddEditExerciseDefinitionSheetState
                     });
                   },
                 ),
-                title: Text(bodyPart),
+                title: Text(
+                  bodyPart,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
                 trailing: IconButton(
                   icon: const Icon(Icons.edit, size: 18),
                   onPressed: () => _showEditBodyPartDialog(context, bodyPart, sortedBodyParts),

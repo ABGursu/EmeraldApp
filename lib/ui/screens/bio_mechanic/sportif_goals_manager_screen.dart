@@ -106,6 +106,8 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                               label: Text(
                                 t,
                                 style: const TextStyle(fontSize: 10),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ).toList(),
@@ -212,6 +214,8 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                             label: Text(
                               type,
                               style: const TextStyle(fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             selected: isSelected,
                             onSelected: (selected) {
@@ -331,6 +335,8 @@ class SportifGoalsManagerScreen extends StatelessWidget {
                             label: Text(
                               type,
                               style: const TextStyle(fontSize: 11),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             selected: isSelected,
                             onSelected: (selected) {
@@ -627,6 +633,8 @@ class _SportifGoalDetailScreenState extends State<SportifGoalDetailScreen> {
                               label: Text(
                                 '${ex.name}$subtitle',
                                 style: const TextStyle(fontSize: 11),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             );
                           }).toList(),
