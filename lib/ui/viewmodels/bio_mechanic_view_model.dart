@@ -231,6 +231,13 @@ class BioMechanicViewModel extends ChangeNotifier {
     await loadExerciseDefinitions();
   }
 
+  /// Remove duplicate exercises (same name as Excel), re-seed from Excel. Result: 153 exercises from Excel. User-created exercises with names not in Excel are kept.
+  Future<void> resetExercisesToExcelOnly() async {
+    await _repository.resetExercisesToExcelOnly();
+    await loadExerciseDefinitions();
+    notifyListeners();
+  }
+
   Future<void> archiveExerciseDefinition(int id) async {
     await _repository.archiveExerciseDefinition(id);
     await loadExerciseDefinitions();

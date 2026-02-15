@@ -32,8 +32,9 @@ class AllEventsListScreen extends StatelessWidget {
             );
           }
 
+          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
             itemCount: vm.events.length,
             itemBuilder: (context, index) {
               final event = vm.events[index];

@@ -73,7 +73,7 @@ class RoutineManagerScreen extends StatelessWidget {
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.all(8),
+                              padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + MediaQuery.of(context).viewPadding.bottom),
                               itemCount: vm.filteredRoutines.length,
                               itemBuilder: (context, index) {
                                 final routine = vm.filteredRoutines[index];

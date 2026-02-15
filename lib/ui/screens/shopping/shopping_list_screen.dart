@@ -99,6 +99,7 @@ class _ShoppingListContent extends StatelessWidget {
       );
     }
 
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     return Column(
       children: [
         // Unpurchased Items Section
@@ -118,20 +119,15 @@ class _ShoppingListContent extends StatelessWidget {
           ),
           Expanded(
             flex: unpurchased.length > purchased.length ? 2 : 1,
-            child: Builder(
-              builder: (context) {
-                final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-                return ListView.builder(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
-                  itemCount: unpurchased.length,
-                  itemBuilder: (context, index) {
-                    final item = unpurchased[index];
-                    return _ShoppingItemTile(
-                      item: item,
-                      vm: vm,
-                      isPurchased: false,
-                    );
-                  },
+            child: ListView.builder(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
+              itemCount: unpurchased.length,
+              itemBuilder: (context, index) {
+                final item = unpurchased[index];
+                return _ShoppingItemTile(
+                  item: item,
+                  vm: vm,
+                  isPurchased: false,
                 );
               },
             ),
@@ -149,28 +145,24 @@ class _ShoppingListContent extends StatelessWidget {
             ),
             initiallyExpanded: false,
             children: [
-              Builder(
-                builder: (context) {
-                  final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
-                    itemCount: purchased.length,
-                    itemBuilder: (context, index) {
-                      final item = purchased[index];
-                      return _ShoppingItemTile(
-                        item: item,
-                        vm: vm,
-                        isPurchased: true,
-                      );
-                    },
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
+                itemCount: purchased.length,
+                itemBuilder: (context, index) {
+                  final item = purchased[index];
+                  return _ShoppingItemTile(
+                    item: item,
+                    vm: vm,
+                    isPurchased: true,
                   );
                 },
               ),
             ],
           ),
         ],
+        SizedBox(height: bottomSafe),
       ],
     );
   }

@@ -34,6 +34,9 @@ abstract class IBioMechanicRepository {
   );
   Future<void> deleteExerciseMuscleImpacts(int exerciseId);
 
+  /// Remove duplicate exercises (same name as Excel) and re-seed from Excel (153). User-created exercises with names not in Excel are kept.
+  Future<void> resetExercisesToExcelOnly();
+
   // === Routines ===
   Future<List<Routine>> getAllRoutines();
   Future<Routine?> getRoutineById(int id);

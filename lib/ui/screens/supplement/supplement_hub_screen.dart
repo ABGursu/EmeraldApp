@@ -314,6 +314,11 @@ class SupplementHubScreen extends StatelessWidget {
                     )
                   : ListView.builder(
                       controller: scrollController,
+                      padding: EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 16 + MediaQuery.of(context).viewPadding.bottom,
+                      ),
                       itemCount: vm.logs.length,
                       itemBuilder: (context, index) {
                         final log = vm.logs[index];

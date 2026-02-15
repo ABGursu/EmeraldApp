@@ -438,7 +438,7 @@ class HabitHubScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 controller: scrollController,
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewPadding.bottom),
                 children: [
                   _buildStatTile(
                     context,

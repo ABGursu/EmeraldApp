@@ -65,8 +65,9 @@ class _SupplementLoggerScreenState extends State<SupplementLoggerScreen> {
             );
           }
 
+          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -187,6 +187,11 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
     );
   }
 
+  @override
+  Future<void> resetExercisesToExcelOnly() async {
+    await _dbHelper.resetExercisesToExcelOnly();
+  }
+
   // === Routines ===
   @override
   Future<List<Routine>> getAllRoutines() async {

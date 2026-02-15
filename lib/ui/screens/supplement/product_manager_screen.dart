@@ -59,8 +59,9 @@ class ProductManagerScreen extends StatelessWidget {
             );
           }
 
+          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
             itemCount: vm.products.length,
             itemBuilder: (context, index) {
               final product = vm.products[index];
@@ -409,7 +410,7 @@ class _ProductEditorScreenState extends State<_ProductEditorScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewPadding.bottom),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

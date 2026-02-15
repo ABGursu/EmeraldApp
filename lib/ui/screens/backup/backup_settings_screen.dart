@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/backup_view_model.dart';
+import '../../viewmodels/bio_mechanic_view_model.dart';
 
 class BackupSettingsScreen extends StatelessWidget {
   const BackupSettingsScreen({super.key});
@@ -21,8 +22,9 @@ class BackupSettingsScreen extends StatelessWidget {
         ),
         body: Consumer<BackupViewModel>(
           builder: (context, vm, _) {
+            final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
               children: [
                 // Info Card
                 Card(
@@ -77,6 +79,17 @@ class BackupSettingsScreen extends StatelessWidget {
                   isLoading: vm.isImporting,
                   onTap: () => _handleImport(context, vm),
                 ),
+                const SizedBox(height: 16),
+
+                _buildActionCard(
+                  context,
+                  title: 'Reset Exercise List',
+                  subtitle: 'Replace entire exercise list with the built-in list',
+                  icon: Icons.refresh,
+                  color: Colors.brown,
+                  isLoading: false,
+                  onTap: () => _showResetExercisesToExcelDialog(context),
+                ),
                 const SizedBox(height: 24),
 
                 // Error Display
@@ -96,7 +109,9 @@ class BackupSettingsScreen extends StatelessWidget {
                             child: Text(
                               vm.lastError!,
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onErrorContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onErrorContainer,
                               ),
                             ),
                           ),
@@ -258,7 +273,8 @@ class BackupSettingsScreen extends StatelessWidget {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Backup restored successfully! Please restart the app.'),
+                content: Text(
+                    'Backup restored successfully! Please restart the app.'),
                 duration: Duration(seconds: 4),
               ),
             );
@@ -267,7 +283,8 @@ class BackupSettingsScreen extends StatelessWidget {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Restore failed: ${vm.lastError ?? "Invalid backup file"}'),
+                content: Text(
+                    'Restore failed: ${vm.lastError ?? "Invalid backup file"}'),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
@@ -285,5 +302,57 @@ class BackupSettingsScreen extends StatelessWidget {
       }
     }
   }
-}
 
+  void _showResetExercisesToExcelDialog(BuildContext context) {
+    final bioVm = context.read<BioMechanicViewModel>();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset exercise list'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'All current exercises will be removed and replaced by the built-in list. '
+            'Workout history that used old exercises may be affected. Continue?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingContext) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Resetting...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+              await bioVm.resetExercisesToExcelOnly();
+              if (!context.mounted) return;
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Exercise list has been reset.')),
+              );
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+}

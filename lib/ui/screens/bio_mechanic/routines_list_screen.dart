@@ -58,8 +58,9 @@ class RoutinesListScreen extends StatelessWidget {
               ),
             );
           }
+          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + bottomSafe),
             itemCount: routines.length,
             itemBuilder: (context, index) {
               final routine = routines[index];

@@ -182,8 +182,9 @@ class _GoalsTab extends StatelessWidget {
           );
         }
 
+        final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
           itemCount: vm.goals.length,
           itemBuilder: (context, index) {
             final goal = vm.goals[index];
@@ -382,8 +383,9 @@ class _HabitsTab extends StatelessWidget {
             return a.title.compareTo(b.title);
           });
 
+        final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
           itemCount: sortedKeys.length,
           itemBuilder: (context, index) {
             final goal = sortedKeys[index];

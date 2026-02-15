@@ -95,8 +95,9 @@ class _CalendarViewScreenState extends State<CalendarViewScreen> {
       days.add(DateTime(_displayedMonth.year, _displayedMonth.month + 1, i));
     }
 
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     return GridView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + bottomSafe),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
         childAspectRatio: 1,

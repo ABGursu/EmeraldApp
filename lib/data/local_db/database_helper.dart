@@ -1028,6 +1028,20 @@ class DatabaseHelper {
     await _seedPrefilledExercisesFromExcel(db);
   }
 
+  /// User-triggered: delete ALL exercises and their muscle impacts, then re-seed from Excel only.
+  /// Fixes legacy DBs (v14, v23, etc.) where old/duplicate exercises with different spellings remain.
+  Future<void> resetExercisesToExcelOnly() async {
+    final db = await database;
+    final allIds = await db.query('exercise_definitions', columns: ['id']);
+    for (final row in allIds) {
+      final id = row['id'] as int?;
+      if (id == null) continue;
+      await db.delete('exercise_muscle_impact', where: 'exercise_id = ?', whereArgs: [id]);
+    }
+    await db.delete('exercise_definitions');
+    await _seedPrefilledExercisesFromExcel(db);
+  }
+
   /// Old exercise names that were pre-installed (legacy/old seed or routine template variants) and are not in current Excel. Delete these.
   /// Excel uses "Push Up", "Pull Up", "Chin Up", "Sit Up" etc.; old DB may have Pushup, Pullup, Chinup, Situp.
   static const List<String> _oldPreinstalledExerciseNames = [

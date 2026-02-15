@@ -71,8 +71,9 @@ class _RoutineEditScreenState extends State<RoutineEditScreen> {
           if (_loadingItems && _items.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
+          final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomSafe),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
