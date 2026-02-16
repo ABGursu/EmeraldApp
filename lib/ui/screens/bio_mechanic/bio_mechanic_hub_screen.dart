@@ -248,7 +248,7 @@ class BioMechanicHubScreen extends StatelessWidget {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'Bio-Mechanic Training',
+                    'Training Summary',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

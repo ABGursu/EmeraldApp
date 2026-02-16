@@ -91,6 +91,12 @@ abstract class IBioMechanicRepository {
   Future<List<ExerciseWithImpact>> getExercisesForMuscleWithScores(
       int muscleId);
 
+  /// Top 2 muscle names (by impact score) per exercise. Used for body-part filtering.
+  Future<Map<int, List<String>>> getTop2MuscleNamesByExerciseId();
+
+  /// All unique muscle names that appear in top 2 of any exercise. Used for filter dropdown.
+  Future<List<String>> getBodyPartsFromTop2Muscles();
+
   /// Calculate progressive overload data for an exercise
   Future<List<ProgressiveOverloadData>> getProgressiveOverloadData({
     required int exerciseId,

@@ -59,6 +59,93 @@ class ShoppingListScreen extends StatelessWidget {
   }
 }
 
+/// Display order: highest priority first (ASAP → High → Mid → Low → Future)
+const List<ShoppingPriority> _priorityDisplayOrder = [
+  ShoppingPriority.asap,
+  ShoppingPriority.high,
+  ShoppingPriority.mid,
+  ShoppingPriority.low,
+  ShoppingPriority.future,
+];
+
+double _itemTotal(ShoppingItemModel item) {
+  return item.estimatedPrice * (item.quantity ?? 1);
+}
+
+List<Widget> _buildPrioritySection(
+  BuildContext context,
+  List<ShoppingItemModel> unpurchased,
+  ShoppingPriority priority,
+  ShoppingViewModel vm,
+) {
+  final items = unpurchased.where((i) => i.priority == priority).toList();
+  if (items.isEmpty) return [];
+
+  final subtotal = items.fold<double>(0, (sum, i) => sum + _itemTotal(i));
+  final (color, icon) = _priorityStyle(priority);
+
+  return [
+    // Section header
+    Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
+          Text(
+            priority.label,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+          ),
+        ],
+      ),
+    ),
+    // Items
+    ...items.map((item) => _ShoppingItemTile(
+          item: item,
+          vm: vm,
+          isPurchased: false,
+        )),
+    // Subtotal row (Flexible to avoid RenderFlex overflow)
+    Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8, left: 8, right: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Flexible(
+            child: Text(
+              '${priority.label} Subtotal: ${subtotal.toStringAsFixed(2)} TL',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    ),
+  ];
+}
+
+(Color, IconData) _priorityStyle(ShoppingPriority priority) {
+  switch (priority) {
+    case ShoppingPriority.asap:
+      return (Colors.red, Icons.priority_high);
+    case ShoppingPriority.high:
+      return (Colors.orange, Icons.arrow_upward);
+    case ShoppingPriority.mid:
+      return (Colors.blue, Icons.remove);
+    case ShoppingPriority.low:
+      return (Colors.grey, Icons.arrow_downward);
+    case ShoppingPriority.future:
+      return (Colors.grey.shade600, Icons.schedule);
+  }
+}
+
 class _ShoppingListContent extends StatelessWidget {
   const _ShoppingListContent({required this.vm});
 
@@ -100,36 +187,33 @@ class _ShoppingListContent extends StatelessWidget {
     }
 
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 16 + bottomSafe;
+
     return Column(
       children: [
-        // Unpurchased Items Section
+        // Unpurchased Items Section (grouped by priority with subtotals)
         if (unpurchased.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  'To Buy (${unpurchased.length})',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'To Buy (${unpurchased.length})',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
             ),
           ),
           Expanded(
             flex: unpurchased.length > purchased.length ? 2 : 1,
-            child: ListView.builder(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
-              itemCount: unpurchased.length,
-              itemBuilder: (context, index) {
-                final item = unpurchased[index];
-                return _ShoppingItemTile(
-                  item: item,
-                  vm: vm,
-                  isPurchased: false,
-                );
-              },
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+              children: [
+                for (final priority in _priorityDisplayOrder) ...[
+                  ..._buildPrioritySection(context, unpurchased, priority, vm),
+                ],
+              ],
             ),
           ),
         ],
@@ -182,12 +266,23 @@ class _ShoppingItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final balanceVm = context.read<BalanceViewModel>();
+    // When rent active: show Rented tag only. When purchased: show item's tag (Shopping default).
+    final showRentedTag = item.rentInBalanceSheet && !isPurchased;
+    TagModel? rentedTag;
+    for (final t in vm.tags) {
+      if (t.name.toLowerCase() == 'rented') {
+        rentedTag = t;
+        break;
+      }
+    }
+    final displayTagId =
+        showRentedTag && rentedTag != null ? rentedTag.id : item.tagId;
     final tag = vm.tags.firstWhere(
-      (t) => t.id == item.tagId,
+      (t) => t.id == displayTagId,
       orElse: () => TagModel(
         id: '',
-        name: 'Shopping',
-        colorValue: 0xFFD2B48C,
+        name: showRentedTag ? 'Rented' : 'Shopping',
+        colorValue: showRentedTag ? 0xFFFFE082 : 0xFFD2B48C,
         createdAt: DateTime.now(),
       ),
     );
@@ -248,23 +343,26 @@ class _ShoppingItemTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Tag Chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Color(tag.colorValue).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Color(tag.colorValue).withValues(alpha: 0.5),
-                  width: 1,
+            // Tag Chip (Rented when rent active, else item's tag)
+            Flexible(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Color(tag.colorValue).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Color(tag.colorValue).withValues(alpha: 0.5),
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: Text(
-                tag.name,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Color(tag.colorValue),
-                  fontWeight: FontWeight.w500,
+                child: Text(
+                  tag.name,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Color(tag.colorValue),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

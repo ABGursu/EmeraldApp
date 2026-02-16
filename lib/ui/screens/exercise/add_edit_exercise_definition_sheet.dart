@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/exercise_definition_model.dart';
+import '../../../ui/viewmodels/bio_mechanic_view_model.dart';
 import '../../../ui/viewmodels/exercise_library_view_model.dart';
 
 class AddEditExerciseDefinitionSheet extends StatefulWidget {
@@ -127,6 +128,7 @@ class _AddEditExerciseDefinitionSheetState
     if (widget.definition != null) {
       // Update existing
       final updated = widget.definition!.copyWith(
+        name: _nameController.text.trim(),
         defaultType: type,
         bodyPart: bodyPart,
       );
@@ -141,6 +143,8 @@ class _AddEditExerciseDefinitionSheetState
     }
 
     if (context.mounted) {
+      // Sync Bio-Mechanic so Exercise Creation / Daily Logger show updated data
+      context.read<BioMechanicViewModel>().loadExerciseDefinitions();
       Navigator.of(context).pop();
     }
   }
@@ -333,21 +337,21 @@ class _AddEditExerciseDefinitionSheetState
       },
     );
 
-    if (result != null && mounted) {
+    if (result != null && context.mounted) {
       final oldName = result['old']!;
       final newName = result['new']!;
-      
+
       // Update all exercises that use this body part
       await _updateBodyPartInAllExercises(vm, oldName, newName);
-      
-      if (mounted) {
-        setState(() {
-          if (_selectedBodyParts.contains(oldName)) {
-            _selectedBodyParts.remove(oldName);
-            _selectedBodyParts.add(newName);
-          }
-        });
-      }
+
+      if (!context.mounted) return;
+      context.read<BioMechanicViewModel>().loadExerciseDefinitions();
+      setState(() {
+        if (_selectedBodyParts.contains(oldName)) {
+          _selectedBodyParts.remove(oldName);
+          _selectedBodyParts.add(newName);
+        }
+      });
     }
   }
 

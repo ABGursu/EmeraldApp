@@ -12,6 +12,8 @@ class ShoppingItemModel {
   final bool isPurchased;
   final DateTime? purchaseDate;
   final String? linkedTransactionId; // ID of the expense transaction created when purchased
+  final bool rentInBalanceSheet; // Reserve estimated price in Balance Sheet with yellow "Rented" tag
+  final String? linkedRentTransactionId; // ID of the rent placeholder transaction
   final DateTime createdAt;
 
   const ShoppingItemModel({
@@ -26,6 +28,8 @@ class ShoppingItemModel {
     this.isPurchased = false,
     this.purchaseDate,
     this.linkedTransactionId,
+    this.rentInBalanceSheet = false,
+    this.linkedRentTransactionId,
     required this.createdAt,
   });
 
@@ -41,6 +45,8 @@ class ShoppingItemModel {
     bool? isPurchased,
     DateTime? purchaseDate,
     String? linkedTransactionId,
+    bool? rentInBalanceSheet,
+    String? linkedRentTransactionId,
     DateTime? createdAt,
   }) {
     return ShoppingItemModel(
@@ -55,6 +61,9 @@ class ShoppingItemModel {
       isPurchased: isPurchased ?? this.isPurchased,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       linkedTransactionId: linkedTransactionId ?? this.linkedTransactionId,
+      rentInBalanceSheet: rentInBalanceSheet ?? this.rentInBalanceSheet,
+      linkedRentTransactionId:
+          linkedRentTransactionId ?? this.linkedRentTransactionId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -71,6 +80,8 @@ class ShoppingItemModel {
         'is_purchased': isPurchased ? 1 : 0,
         'purchase_date': purchaseDate?.millisecondsSinceEpoch,
         'linked_transaction_id': linkedTransactionId,
+        'rent_in_balance_sheet': rentInBalanceSheet ? 1 : 0,
+        'linked_rent_transaction_id': linkedRentTransactionId,
         'created_at': createdAt.millisecondsSinceEpoch,
       };
 
@@ -89,6 +100,9 @@ class ShoppingItemModel {
           ? DateTime.fromMillisecondsSinceEpoch(map['purchase_date'] as int)
           : null,
       linkedTransactionId: map['linked_transaction_id'] as String?,
+      rentInBalanceSheet: (map['rent_in_balance_sheet'] as int? ?? 0) == 1,
+      linkedRentTransactionId:
+          map['linked_rent_transaction_id'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );
   }

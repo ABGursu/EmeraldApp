@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 27;
+  static const int _dbVersion = 28;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -663,9 +663,12 @@ class DatabaseHelper {
         is_purchased INTEGER NOT NULL DEFAULT 0,
         purchase_date INTEGER,
         linked_transaction_id TEXT,
+        rent_in_balance_sheet INTEGER NOT NULL DEFAULT 0,
+        linked_rent_transaction_id TEXT,
         created_at INTEGER NOT NULL,
         FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE SET NULL,
-        FOREIGN KEY(linked_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
+        FOREIGN KEY(linked_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+        FOREIGN KEY(linked_rent_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL
       )
     ''');
 
@@ -1008,6 +1011,19 @@ class DatabaseHelper {
       }
       // One-time: remove all preinstalled exercises and re-seed from Excel only (153 exercises).
       await _wipePreinstalledAndReseedFromExcel(db);
+    }
+    if (oldVersion < 28) {
+      // Shopping: rent in Balance Sheet (reserve estimated price with yellow "Rented" tag)
+      try {
+        await db.execute(
+          'ALTER TABLE shopping_items ADD COLUMN rent_in_balance_sheet INTEGER NOT NULL DEFAULT 0',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE shopping_items ADD COLUMN linked_rent_transaction_id TEXT',
+        );
+      } catch (_) {}
     }
   }
 

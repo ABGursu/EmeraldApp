@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/exercise_definition_model.dart';
+import '../../../ui/viewmodels/bio_mechanic_view_model.dart';
 import '../../../ui/viewmodels/exercise_library_view_model.dart';
 import '../../widgets/quick_filter_bar.dart';
 import 'add_edit_exercise_definition_sheet.dart';
@@ -264,6 +265,7 @@ class ExerciseLibraryScreen extends StatelessWidget {
       await _updateBodyPartInAllExercises(vm, oldName, newName);
 
       if (context.mounted) {
+        context.read<BioMechanicViewModel>().loadExerciseDefinitions();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(

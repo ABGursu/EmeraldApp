@@ -211,11 +211,14 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   double get currentMonthTotalExpenses {
     final fiscal = getCurrentFiscalMonth();
-    
+    // Inclusive range [fiscal.start, fiscal.end]: tx >= start AND tx <= end
+    // Use !isBefore for start (includes start day 00:00:00)
+    // Use isBefore(end + 1 sec) for end (includes end day 23:59:59.xxx)
+    final endExclusive = fiscal.end.add(const Duration(seconds: 1));
     return _transactions
-        .where((tx) => tx.amount < 0 && 
-                      tx.date.isAfter(fiscal.start.subtract(const Duration(days: 1))) && 
-                      tx.date.isBefore(fiscal.end.add(const Duration(days: 1))))
+        .where((tx) => tx.amount < 0 &&
+                      !tx.date.isBefore(fiscal.start) &&
+                      tx.date.isBefore(endExclusive))
         .fold<double>(0.0, (sum, tx) => sum + tx.amount.abs());
   }
 
@@ -237,7 +240,13 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     final allTransactions = await _repository.getTransactions();
     
     // Apply date range filter if set
+    // Inclusive range [filterStartDate, filterEndDate]: tx >= start AND tx <= end
     if (_filterStartDate != null && _filterEndDate != null) {
+      final startOfRange = DateTime(
+        _filterStartDate!.year,
+        _filterStartDate!.month,
+        _filterStartDate!.day,
+      );
       final endOfDay = DateTime(
         _filterEndDate!.year,
         _filterEndDate!.month,
@@ -246,9 +255,9 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
         59,
         59,
       );
+      final endExclusive = endOfDay.add(const Duration(seconds: 1));
       _transactions = allTransactions.where((tx) {
-        return tx.date.isAfter(_filterStartDate!.subtract(const Duration(days: 1))) &&
-               tx.date.isBefore(endOfDay.add(const Duration(days: 1)));
+        return !tx.date.isBefore(startOfRange) && tx.date.isBefore(endExclusive);
       }).toList();
     } else {
       _transactions = allTransactions;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodels/bio_mechanic_view_model.dart';
+import '../../viewmodels/exercise_library_view_model.dart';
 import '../../../data/models/exercise_definition_model.dart';
 import '../../../data/models/exercise_muscle_impact_model.dart';
 import '../../../data/models/muscle_model.dart';
@@ -207,12 +208,13 @@ class ExerciseCreationScreen extends StatelessWidget {
   }
 
   void _showCreateExerciseDialog(BuildContext context) {
+    final vm = context.read<BioMechanicViewModel>();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => const _ExerciseEditScreen(),
       ),
-    );
+    ).then((_) => vm.loadExerciseDefinitions());
   }
 
   void _showEditExerciseDialog(
@@ -225,7 +227,7 @@ class ExerciseCreationScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => _ExerciseEditScreen(exercise: exercise),
       ),
-    );
+    ).then((_) => vm.loadExerciseDefinitions());
   }
 
   void _showDeleteDialog(
@@ -753,9 +755,28 @@ class _ExerciseEditScreenState extends State<_ExerciseEditScreen> {
       }).toList();
       vm.setExerciseImpacts(updatedImpacts);
       await vm.saveExerciseImpacts(exerciseId);
+
+      // Update bodyPart from highest muscle impact (so filter reflects edited impacts)
+      final sortedByScore = List<ExerciseMuscleImpactModel>.from(updatedImpacts)
+        ..sort((a, b) => b.impactScore.compareTo(a.impactScore));
+      final topMuscleId = sortedByScore.first.muscleId;
+      MuscleModel? topMuscle;
+      for (final m in vm.muscles) {
+        if (m.id == topMuscleId) {
+          topMuscle = m;
+          break;
+        }
+      }
+      if (topMuscle != null) {
+        final updatedExercise =
+            exercise.copyWith(id: exerciseId, bodyPart: topMuscle.name);
+        await vm.updateExerciseDefinition(updatedExercise);
+      }
     }
 
     if (context.mounted) {
+      // Sync Exercise Library so it shows updated data when user navigates there
+      context.read<ExerciseLibraryViewModel>().loadExerciseDefinitions();
       Navigator.pop(context);
     }
   }

@@ -593,6 +593,38 @@ class SqlBioMechanicRepository implements IBioMechanicRepository {
   }
 
   @override
+  Future<Map<int, List<String>>> getTop2MuscleNamesByExerciseId() async {
+    final db = await _dbHelper.database;
+    final result = await db.rawQuery('''
+      SELECT emi.exercise_id, m.name as muscle_name, emi.impact_score
+      FROM exercise_muscle_impact emi
+      JOIN muscles m ON emi.muscle_id = m.id
+      JOIN exercise_definitions e ON emi.exercise_id = e.id AND e.is_archived = 0
+      ORDER BY emi.exercise_id, emi.impact_score DESC
+    ''');
+    final map = <int, List<String>>{};
+    for (final row in result) {
+      final eid = row['exercise_id'] as int;
+      map.putIfAbsent(eid, () => []);
+      if (map[eid]!.length < 2) {
+        map[eid]!.add(row['muscle_name'] as String);
+      }
+    }
+    return map;
+  }
+
+  @override
+  Future<List<String>> getBodyPartsFromTop2Muscles() async {
+    final top2 = await getTop2MuscleNamesByExerciseId();
+    final names = <String>{};
+    for (final list in top2.values) {
+      names.addAll(list);
+    }
+    final sorted = names.toList()..sort();
+    return sorted;
+  }
+
+  @override
   Future<List<ProgressiveOverloadData>> getProgressiveOverloadData({
     required int exerciseId,
     required DateTime from,

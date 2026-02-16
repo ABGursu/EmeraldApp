@@ -30,8 +30,9 @@ class BioMechanicViewModel extends ChangeNotifier {
   // Muscles
   List<MuscleModel> _muscles = [];
 
-  // Distinct body parts taken from exercise definitions (Excel-driven)
+  // Distinct body parts from top 2 muscles (for filter dropdown)
   List<String> _bodyParts = [];
+  Map<int, List<String>> _top2MuscleNamesByExerciseId = {};
 
   // Exercise Definitions
   List<ExerciseDefinition> _exerciseDefinitions = [];
@@ -91,10 +92,12 @@ class BioMechanicViewModel extends ChangeNotifier {
           filtered.where((e) => e.name.toLowerCase().contains(query)).toList();
     }
 
-    // Filter by body part
+    // Filter by body part: match if selected body part is in top 2 muscles (by impact score)
     if (_selectedBodyPart != null) {
-      filtered =
-          filtered.where((e) => e.bodyPart == _selectedBodyPart).toList();
+      filtered = filtered.where((e) {
+        final top2 = _top2MuscleNamesByExerciseId[e.id];
+        return top2 != null && top2.contains(_selectedBodyPart);
+      }).toList();
     }
 
     return filtered;
@@ -194,13 +197,10 @@ class BioMechanicViewModel extends ChangeNotifier {
     _exerciseDefinitions = await _repository.getAllExerciseDefinitions(
         includeArchived: includeArchived);
 
-    // Refresh available body-part filters based on current definitions.
-    _bodyParts = _exerciseDefinitions
-        .map((e) => e.bodyPart)
-        .whereType<String>()
-        .toSet()
-        .toList()
-      ..sort();
+    // Body-part filter: all unique muscle names from top 2 impacts (so e.g. Obliques appears when plank has it as #2)
+    _top2MuscleNamesByExerciseId =
+        await _repository.getTop2MuscleNamesByExerciseId();
+    _bodyParts = await _repository.getBodyPartsFromTop2Muscles();
 
     notifyListeners();
   }

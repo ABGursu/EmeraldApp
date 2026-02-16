@@ -26,6 +26,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
   late final TextEditingController _noteController;
   late ShoppingPriority _selectedPriority;
   ColorCodedItem? _selectedTag;
+  bool _rentInBalanceSheet = false;
 
   @override
   void initState() {
@@ -39,6 +40,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
     );
     _noteController = TextEditingController(text: widget.item?.note ?? '');
     _selectedPriority = widget.item?.priority ?? ShoppingPriority.mid;
+    _rentInBalanceSheet = widget.item?.rentInBalanceSheet ?? false;
 
     // Initialize tag selection
     if (widget.item?.tagId != null) {
@@ -200,6 +202,25 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
+                // Rent in Balance Sheet: reserve estimated price with yellow "Rented" tag
+                SwitchListTile(
+                  title: const Text('Reserve estimated price in Balance Sheet'),
+                  subtitle: Text(
+                    _rentInBalanceSheet
+                        ? 'Placeholder in Balance Sheet with yellow "Rented" tag'
+                        : 'Inactive',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                  ),
+                  value: _rentInBalanceSheet,
+                  onChanged: (value) =>
+                      setState(() => _rentInBalanceSheet = value),
+                ),
+                const SizedBox(height: 16),
                 ColorCodedSelectorFormField(
                   label: 'Tag (optional)',
                   items: tagItems,
@@ -304,6 +325,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
     final quantity = _quantityController.text.isNotEmpty
         ? int.tryParse(_quantityController.text)
         : null;
+    final balanceVm = context.read<BalanceViewModel>();
 
     if (isEditing && widget.item != null) {
       final updatedItem = widget.item!.copyWith(
@@ -315,8 +337,9 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
             ? null
             : _noteController.text.trim(),
         tagId: _selectedTag?.id,
+        rentInBalanceSheet: _rentInBalanceSheet,
       );
-      await vm.updateItem(updatedItem);
+      await vm.updateItem(updatedItem, balanceVm: balanceVm);
     } else {
       await vm.addItem(
         name: _nameController.text.trim(),
@@ -327,6 +350,8 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
             ? null
             : _noteController.text.trim(),
         tagId: _selectedTag?.id,
+        rentInBalanceSheet: _rentInBalanceSheet,
+        balanceVm: balanceVm,
       );
     }
 

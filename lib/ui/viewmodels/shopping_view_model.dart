@@ -122,6 +122,43 @@ class ShoppingViewModel extends ChangeNotifier {
     return id;
   }
 
+  /// Gets or creates the light yellow "Rented" tag for Balance Sheet rent placeholders
+  static const int _rentedTagColor = 0xFFFFE082; // Amber 200 - light yellow
+
+  Future<String> getOrCreateRentedTag() async {
+    final rentedTag = _tags.firstWhere(
+      (tag) => tag.name.toLowerCase() == 'rented',
+      orElse: () => TagModel(
+        id: '',
+        name: '',
+        colorValue: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+
+    if (rentedTag.id.isNotEmpty) {
+      // Update to lighter color if it had the old darker one
+      if (rentedTag.colorValue != _rentedTagColor) {
+        await _balanceRepository.updateTag(
+          rentedTag.copyWith(colorValue: _rentedTagColor),
+        );
+        await loadTags();
+      }
+      return rentedTag.id;
+    }
+
+    // Light yellow tag: #FFE082 (Amber 200)
+    final newTag = TagModel(
+      id: generateId(),
+      name: 'Rented',
+      colorValue: _rentedTagColor,
+      createdAt: DateTime.now(),
+    );
+    final id = await _balanceRepository.createTag(newTag);
+    await loadTags();
+    return id;
+  }
+
   Future<String> addItem({
     required String name,
     required double estimatedPrice,
@@ -129,11 +166,13 @@ class ShoppingViewModel extends ChangeNotifier {
     int? quantity,
     String? note,
     String? tagId,
+    bool rentInBalanceSheet = false,
+    BalanceViewModel? balanceVm,
   }) async {
     // If no tag provided, use default "Shopping" tag
     final finalTagId = tagId ?? await getOrCreateShoppingTag();
 
-    final item = ShoppingItemModel(
+    var item = ShoppingItemModel(
       id: generateId(),
       name: name,
       estimatedPrice: estimatedPrice,
@@ -141,15 +180,83 @@ class ShoppingViewModel extends ChangeNotifier {
       quantity: quantity,
       note: note,
       tagId: finalTagId,
+      rentInBalanceSheet: rentInBalanceSheet,
       createdAt: DateTime.now(),
     );
 
-    final id = await _repository.createItem(item);
+    await _repository.createItem(item);
+
+    // Create rent transaction in Balance Sheet if option is enabled
+    if (rentInBalanceSheet && balanceVm != null) {
+      final rentAmount = estimatedPrice * (quantity ?? 1);
+      final rentTagId = await getOrCreateRentedTag();
+      final txId = await balanceVm.addTransaction(
+        amount: rentAmount,
+        isExpense: true,
+        date: DateTime.now(),
+        tagId: rentTagId,
+        note: 'Rented by $name',
+      );
+      item = item.copyWith(linkedRentTransactionId: txId);
+      await _repository.updateItem(item);
+    }
+
     await loadItems();
-    return id;
+    return item.id;
   }
 
-  Future<void> updateItem(ShoppingItemModel item) async {
+  Future<void> updateItem(
+    ShoppingItemModel item, {
+    BalanceViewModel? balanceVm,
+  }) async {
+    ShoppingItemModel? existing;
+    for (final i in _items) {
+      if (i.id == item.id) {
+        existing = i;
+        break;
+      }
+    }
+    if (existing != null && balanceVm != null) {
+      // Rent was on, now off: remove rent transaction
+      if (existing.rentInBalanceSheet && !item.rentInBalanceSheet) {
+        if (existing.linkedRentTransactionId != null) {
+          await balanceVm.deleteTransaction(existing.linkedRentTransactionId!);
+        }
+        item = item.copyWith(linkedRentTransactionId: null);
+      }
+      // Rent was off, now on: create rent transaction
+      else if (!existing.rentInBalanceSheet && item.rentInBalanceSheet) {
+        final rentAmount = item.estimatedPrice * (item.quantity ?? 1);
+        final rentTagId = await getOrCreateRentedTag();
+        final txId = await balanceVm.addTransaction(
+          amount: rentAmount,
+          isExpense: true,
+          date: DateTime.now(),
+          tagId: rentTagId,
+          note: 'Rented by ${item.name}',
+        );
+        item = item.copyWith(linkedRentTransactionId: txId);
+      }
+      // Rent still on but price/name/quantity changed: update rent transaction
+      else if (item.rentInBalanceSheet &&
+          item.linkedRentTransactionId != null &&
+          (existing.estimatedPrice != item.estimatedPrice ||
+              existing.quantity != item.quantity ||
+              existing.name != item.name)) {
+        final rentAmount = item.estimatedPrice * (item.quantity ?? 1);
+        await balanceVm.deleteTransaction(item.linkedRentTransactionId!);
+        final rentTagId = await getOrCreateRentedTag();
+        final txId = await balanceVm.addTransaction(
+          amount: rentAmount,
+          isExpense: true,
+          date: DateTime.now(),
+          tagId: rentTagId,
+          note: 'Rented by ${item.name}',
+        );
+        item = item.copyWith(linkedRentTransactionId: txId);
+      }
+    }
+
     await _repository.updateItem(item);
     await loadItems();
   }
@@ -157,6 +264,12 @@ class ShoppingViewModel extends ChangeNotifier {
   Future<void> deleteItem(String id, {BalanceViewModel? balanceVm}) async {
     final item = _items.firstWhere((i) => i.id == id);
     final hasLinkedTransaction = item.linkedTransactionId != null;
+    final hasRentTransaction = item.linkedRentTransactionId != null;
+
+    // Remove rent transaction (always - rent is placeholder, not actual purchase)
+    if (hasRentTransaction && balanceVm != null) {
+      await balanceVm.deleteTransaction(item.linkedRentTransactionId!);
+    }
 
     // Handle linked expense deletion based on settings
     if (hasLinkedTransaction && balanceVm != null) {
@@ -178,6 +291,11 @@ class ShoppingViewModel extends ChangeNotifier {
     required DateTime purchaseDate,
     required BalanceViewModel balanceVm,
   }) async {
+    // Remove rent transaction if it exists (rent is replaced by actual purchase)
+    if (item.linkedRentTransactionId != null) {
+      await balanceVm.deleteTransaction(item.linkedRentTransactionId!);
+    }
+
     // Create expense transaction and get its ID
     final transactionId = await balanceVm.addTransaction(
       amount: actualPrice,
@@ -187,12 +305,13 @@ class ShoppingViewModel extends ChangeNotifier {
       note: 'Shopping: ${item.name}',
     );
 
-    // Update shopping item
+    // Update shopping item (clear rent fields)
     final updatedItem = item.copyWith(
       isPurchased: true,
       actualPrice: actualPrice,
       purchaseDate: purchaseDate,
       linkedTransactionId: transactionId,
+      linkedRentTransactionId: null,
     );
 
     await _repository.updateItem(updatedItem);
@@ -283,4 +402,3 @@ class ShoppingViewModel extends ChangeNotifier {
     await loadItems();
   }
 }
-
