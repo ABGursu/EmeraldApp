@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 28;
+  static const int _dbVersion = 29;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -132,6 +132,9 @@ class DatabaseHelper {
 
     // Calendar & Diary Module Tables (v14)
     await _createCalendarTables(db);
+
+    // Todo Module Tables (v29)
+    await _createTodoTables(db);
 
     // Create indexes for performance optimization (v16)
     await _createIndexes(db);
@@ -727,6 +730,31 @@ class DatabaseHelper {
     ''');
   }
 
+  Future<void> _createTodoTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE todo_items(
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        deadline INTEGER,
+        status INTEGER NOT NULL DEFAULT 0,
+        linked_calendar_event_id TEXT,
+        created_at INTEGER NOT NULL,
+        FOREIGN KEY(linked_calendar_event_id) REFERENCES calendar_events(id) ON DELETE SET NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_todo_items_deadline
+      ON todo_items(deadline)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_todo_items_status
+      ON todo_items(status)
+    ''');
+  }
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       await db.execute('''
@@ -1024,6 +1052,9 @@ class DatabaseHelper {
           'ALTER TABLE shopping_items ADD COLUMN linked_rent_transaction_id TEXT',
         );
       } catch (_) {}
+    }
+    if (oldVersion < 29) {
+      await _createTodoTables(db);
     }
   }
 

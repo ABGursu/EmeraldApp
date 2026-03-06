@@ -9,6 +9,7 @@ import '../screens/supplement/supplement_hub_screen.dart';
 import '../screens/habit/habit_hub_screen.dart';
 import '../screens/shopping/shopping_list_screen.dart';
 import '../screens/calendar/calendar_hub_screen.dart';
+import '../screens/todo/todo_list_screen.dart';
 import '../screens/backup/backup_settings_screen.dart';
 import '../screens/home/home_layout_settings_screen.dart';
 
@@ -63,6 +64,13 @@ class HomeLayoutViewModel extends ChangeNotifier {
         icon: Icons.calendar_today,
         color: const Color(0xFF00E5FF),
         buildScreen: () => const CalendarHubScreen(),
+      ),
+      HomeMenuItem(
+        id: 'todo',
+        title: 'Todo List',
+        icon: Icons.checklist,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const TodoListScreen(),
       ),
       HomeMenuItem(
         id: 'backup',

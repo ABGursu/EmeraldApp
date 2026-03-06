@@ -207,7 +207,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   title: const Text('Reserve estimated price in Balance Sheet'),
                   subtitle: Text(
                     _rentInBalanceSheet
-                        ? 'Placeholder in Balance Sheet with yellow "Rented" tag'
+                        ? 'Placeholder in Balance Sheet'
                         : 'Inactive',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context)

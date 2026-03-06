@@ -228,7 +228,7 @@ class _BudgetOverviewCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 4,
             spreadRadius: 1,
           ),
@@ -271,7 +271,7 @@ class _BudgetOverviewCard extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withValues(alpha: 0.6),
+                      .withOpacity(0.6),
                 ),
           ),
           const SizedBox(height: 8),
@@ -282,7 +282,7 @@ class _BudgetOverviewCard extends StatelessWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withValues(alpha: 0.6),
+                        .withOpacity(0.6),
                   ),
             )
           else ...[
@@ -477,13 +477,13 @@ class _CurrentBalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isPositive
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
-              : Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+              : Theme.of(context).colorScheme.error.withOpacity(0.5),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withOpacity(0.2),
             blurRadius: 8,
             spreadRadius: 2,
           ),
@@ -498,7 +498,7 @@ class _CurrentBalanceCard extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withValues(alpha: 0.7),
+                      .withOpacity(0.7),
                 ),
           ),
           const SizedBox(height: 8),
@@ -551,6 +551,15 @@ class _TransactionList extends StatelessWidget {
         final date = entry.key;
         final transactions = entry.value;
         
+        final dailyTotal = transactions.fold<double>(
+          0, (sum, tx) => sum + tx.amount);
+        final dailyExpenses = transactions
+            .where((tx) => tx.amount < 0)
+            .fold<double>(0, (sum, tx) => sum + tx.amount);
+        final dailyIncome = transactions
+            .where((tx) => tx.amount > 0)
+            .fold<double>(0, (sum, tx) => sum + tx.amount);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -563,24 +572,76 @@ class _TransactionList extends StatelessWidget {
             ),
             Card(
               child: Column(
-                children: transactions
-                    .map((tx) {
-                      final tag = tags.firstWhere(
-                        (t) => t.id == tx.tagId,
-                        orElse: () => const ColorCodedItem(
-                          id: '',
-                          name: 'Untagged',
-                          colorValue: 0xFF9E9E9E,
+                children: [
+                  ...transactions.map((tx) {
+                    final tag = tags.firstWhere(
+                      (t) => t.id == tx.tagId,
+                      orElse: () => const ColorCodedItem(
+                        id: '',
+                        name: 'Untagged',
+                        colorValue: 0xFF9E9E9E,
+                      ),
+                    );
+                    return _TransactionTile(
+                      transaction: tx,
+                      tagName: tag.name,
+                      colorValue: tag.colorValue,
+                      tags: tags,
+                    );
+                  }),
+                  if (transactions.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withOpacity(0.5),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
                         ),
-                      );
-                      return _TransactionTile(
-                        transaction: tx,
-                        tagName: tag.name,
-                        colorValue: tag.colorValue,
-                        tags: tags,
-                      );
-                    })
-                    .toList(),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (dailyIncome > 0) ...[
+                            Text(
+                              '+${dailyIncome.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          if (dailyExpenses < 0) ...[
+                            Text(
+                              dailyExpenses.toStringAsFixed(2),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                          ],
+                          Text(
+                            'Net: ${dailyTotal >= 0 ? '+' : ''}${dailyTotal.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: dailyTotal >= 0
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
