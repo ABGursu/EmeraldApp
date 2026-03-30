@@ -47,6 +47,7 @@ class _PieChartSheetState extends State<PieChartSheet> {
 
     final range = await showDateRangePicker(
       context: context,
+      locale: const Locale('en', 'GB'),
       initialDateRange: _fromDate != null && _toDate != null
           ? DateTimeRange(start: _fromDate!, end: _toDate!)
           : null,

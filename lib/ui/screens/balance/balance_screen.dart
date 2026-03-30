@@ -35,6 +35,7 @@ class BalanceScreen extends StatelessWidget {
                 onPressed: () async {
                   final range = await showDateRangePicker(
                     context: context,
+                    locale: const Locale('en', 'GB'),
                     firstDate: DateTime(2000),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );

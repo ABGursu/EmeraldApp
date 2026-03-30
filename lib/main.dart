@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/local_db/database_helper.dart';
 import 'data/models/home_menu_item.dart';
@@ -75,6 +76,14 @@ class EmeraldApp extends StatelessWidget {
         theme: _buildCyberpunkTheme(Brightness.light),
         darkTheme: _buildCyberpunkTheme(Brightness.dark),
         themeMode: ThemeMode.system, // Use device's system theme
+        locale: const Locale('en', 'GB'),
+        supportedLocales: const [
+          Locale('en', 'GB'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
         home: const MainMenuScreen(),
       ),
     );

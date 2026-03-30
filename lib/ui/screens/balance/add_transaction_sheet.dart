@@ -45,6 +45,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
+      locale: const Locale('en', 'GB'),
       initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now().add(const Duration(days: 365)),
