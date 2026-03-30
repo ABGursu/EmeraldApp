@@ -52,14 +52,19 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   List<TransactionModel> get transactions => _transactions;
   List<TagModel> get tags => _tags;
-  
-  /// Filtered tags based on search query
+
+  /// Tags visible in Balance Sheet (filter chips and transaction picker).
+  List<TagModel> get tagsForBalance =>
+      _tags.where((t) => t.showInBalance).toList();
+
+  /// Filtered tags based on search query (balance-visible only)
   List<TagModel> get filteredTags {
+    final base = tagsForBalance;
     if (_tagSearchQuery.isEmpty) {
-      return _tags;
+      return base;
     }
     final query = _tagSearchQuery.toLowerCase();
-    return _tags.where((tag) => tag.name.toLowerCase().contains(query)).toList();
+    return base.where((tag) => tag.name.toLowerCase().contains(query)).toList();
   }
   bool get isLoading => _loading;
   double? get currentBudget => _currentBudget;
@@ -229,6 +234,15 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   Future<void> loadTags() async {
     _tags = await _repository.getAllTags();
+    if (_selectedTagId != null) {
+      final stillVisible =
+          _tags.any((t) => t.id == _selectedTagId && t.showInBalance);
+      if (!stillVisible) {
+        _selectedTagId = null;
+        _groupedByDateCache = null;
+        _cachedGroupedTagId = null;
+      }
+    }
     notifyListeners();
   }
 
@@ -290,12 +304,19 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     }
   }
 
-  Future<String> addTag(String name, int colorValue) async {
+  Future<String> addTag(
+    String name,
+    int colorValue, {
+    bool showInBalance = true,
+    bool showInShopping = true,
+  }) async {
     final tag = TagModel(
       id: generateId(),
       name: name,
       colorValue: colorValue,
       createdAt: DateTime.now(),
+      showInBalance: showInBalance,
+      showInShopping: showInShopping,
     );
     final id = await _repository.createTag(tag);
     await loadTags();

@@ -21,6 +21,8 @@ class EditTagSheet extends StatefulWidget {
 class _EditTagSheetState extends State<EditTagSheet> {
   late final TextEditingController _nameController;
   late ColorCodedItem _currentItem;
+  late bool _showInBalance;
+  late bool _showInShopping;
 
   @override
   void initState() {
@@ -31,6 +33,8 @@ class _EditTagSheetState extends State<EditTagSheet> {
       name: widget.tag.name,
       colorValue: widget.tag.colorValue,
     );
+    _showInBalance = widget.tag.showInBalance;
+    _showInShopping = widget.tag.showInShopping;
   }
 
   @override
@@ -107,6 +111,23 @@ class _EditTagSheetState extends State<EditTagSheet> {
               validator: (item) => null,
               onCreateNew: (name, color) async => _currentItem, // Not used
             ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('Use in Balance Sheet'),
+              subtitle: const Text(
+                'Show this tag in Balance filters and when adding transactions',
+              ),
+              value: _showInBalance,
+              onChanged: (v) => setState(() => _showInBalance = v),
+            ),
+            SwitchListTile(
+              title: const Text('Use in Shopping List'),
+              subtitle: const Text(
+                'Show this tag in Shopping filters and when adding items',
+              ),
+              value: _showInShopping,
+              onChanged: (v) => setState(() => _showInShopping = v),
+            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -142,6 +163,8 @@ class _EditTagSheetState extends State<EditTagSheet> {
     final updatedTag = widget.tag.copyWith(
       name: _nameController.text.trim(),
       colorValue: _currentItem.colorValue,
+      showInBalance: _showInBalance,
+      showInShopping: _showInShopping,
     );
 
     await vm.updateTag(updatedTag);

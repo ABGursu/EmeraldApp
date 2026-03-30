@@ -14,6 +14,8 @@ class ShoppingItemModel {
   final String? linkedTransactionId; // ID of the expense transaction created when purchased
   final bool rentInBalanceSheet; // Reserve estimated price in Balance Sheet with yellow "Rented" tag
   final String? linkedRentTransactionId; // ID of the rent placeholder transaction
+  /// True = Need, false = Want
+  final bool isNeed;
   final DateTime createdAt;
 
   const ShoppingItemModel({
@@ -30,6 +32,7 @@ class ShoppingItemModel {
     this.linkedTransactionId,
     this.rentInBalanceSheet = false,
     this.linkedRentTransactionId,
+    this.isNeed = true,
     required this.createdAt,
   });
 
@@ -47,6 +50,7 @@ class ShoppingItemModel {
     String? linkedTransactionId,
     bool? rentInBalanceSheet,
     String? linkedRentTransactionId,
+    bool? isNeed,
     DateTime? createdAt,
   }) {
     return ShoppingItemModel(
@@ -64,6 +68,7 @@ class ShoppingItemModel {
       rentInBalanceSheet: rentInBalanceSheet ?? this.rentInBalanceSheet,
       linkedRentTransactionId:
           linkedRentTransactionId ?? this.linkedRentTransactionId,
+      isNeed: isNeed ?? this.isNeed,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -82,6 +87,7 @@ class ShoppingItemModel {
         'linked_transaction_id': linkedTransactionId,
         'rent_in_balance_sheet': rentInBalanceSheet ? 1 : 0,
         'linked_rent_transaction_id': linkedRentTransactionId,
+        'is_need': isNeed ? 1 : 0,
         'created_at': createdAt.millisecondsSinceEpoch,
       };
 
@@ -103,6 +109,7 @@ class ShoppingItemModel {
       rentInBalanceSheet: (map['rent_in_balance_sheet'] as int? ?? 0) == 1,
       linkedRentTransactionId:
           map['linked_rent_transaction_id'] as String?,
+      isNeed: (map['is_need'] as int? ?? 1) == 1,
       createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int),
     );
   }

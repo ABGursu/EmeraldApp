@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 29;
+  static const int _dbVersion = 31;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -38,7 +38,9 @@ class DatabaseHelper {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         color_value INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        show_in_balance INTEGER NOT NULL DEFAULT 1,
+        show_in_shopping INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -135,6 +137,9 @@ class DatabaseHelper {
 
     // Todo Module Tables (v29)
     await _createTodoTables(db);
+
+    // Tab Inspector (v31)
+    await _createTabInspectorTables(db);
 
     // Create indexes for performance optimization (v16)
     await _createIndexes(db);
@@ -668,6 +673,7 @@ class DatabaseHelper {
         linked_transaction_id TEXT,
         rent_in_balance_sheet INTEGER NOT NULL DEFAULT 0,
         linked_rent_transaction_id TEXT,
+        is_need INTEGER NOT NULL DEFAULT 1,
         created_at INTEGER NOT NULL,
         FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE SET NULL,
         FOREIGN KEY(linked_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
@@ -688,6 +694,8 @@ class DatabaseHelper {
         'name': 'Shopping',
         'color_value': 0xFFD2B48C, // Light Brown
         'created_at': DateTime.now().millisecondsSinceEpoch,
+        'show_in_balance': 1,
+        'show_in_shopping': 1,
       });
     }
   }
@@ -1056,6 +1064,45 @@ class DatabaseHelper {
     if (oldVersion < 29) {
       await _createTodoTables(db);
     }
+    if (oldVersion < 30) {
+      // Tag visibility: legacy rows visible in both modules (no UX break)
+      try {
+        await db.execute(
+          'ALTER TABLE tags ADD COLUMN show_in_balance INTEGER NOT NULL DEFAULT 1',
+        );
+      } catch (_) {}
+      try {
+        await db.execute(
+          'ALTER TABLE tags ADD COLUMN show_in_shopping INTEGER NOT NULL DEFAULT 1',
+        );
+      } catch (_) {}
+      // Ensure legacy rows (already defaulted) stay fully visible in both modules
+      await db.execute('UPDATE tags SET show_in_balance = 1, show_in_shopping = 1');
+
+      // Shopping: Need vs Want (default Need for legacy items)
+      try {
+        await db.execute(
+          'ALTER TABLE shopping_items ADD COLUMN is_need INTEGER NOT NULL DEFAULT 1',
+        );
+      } catch (_) {}
+      await db.execute('UPDATE shopping_items SET is_need = 1');
+    }
+    if (oldVersion < 31) {
+      await _createTabInspectorTables(db);
+    }
+  }
+
+  Future<void> _createTabInspectorTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS tab_inspector_items(
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL,
+        is_done INTEGER NOT NULL DEFAULT 0,
+        preview_image_url TEXT,
+        created_at INTEGER NOT NULL
+      )
+    ''');
   }
 
   /// One-time reset: delete all preinstalled exercises and their muscle impacts, then re-seed from Excel (153).

@@ -162,7 +162,7 @@ class _ShoppingListContent extends StatelessWidget {
 
     TagModel? selectedTag;
     if (vm.selectedTagId != null) {
-      for (final t in vm.tags) {
+      for (final t in vm.tagsForShopping) {
         if (t.id == vm.selectedTagId) {
           selectedTag = t;
           break;
@@ -172,12 +172,14 @@ class _ShoppingListContent extends StatelessWidget {
 
     final filteredCount = unpurchased.length + purchased.length;
     final isTagFilterActive = vm.selectedTagId != null;
+    final isNeedWantFilterActive = vm.needWantSegmentIndex != 0;
     final hasAnyItems = vm.items.isNotEmpty;
 
     Widget listBody;
     if (filteredCount == 0) {
-      final message = isTagFilterActive && hasAnyItems
-          ? 'No items found for this tag'
+      final message = (isTagFilterActive || isNeedWantFilterActive) &&
+              hasAnyItems
+          ? 'No items match the current filters'
           : 'No items yet';
 
       listBody = Center(
@@ -257,7 +259,9 @@ class _ShoppingListContent extends StatelessWidget {
                     child: child,
                   ),
                   child: ListView.builder(
-                    key: ValueKey('p-${vm.selectedTagId ?? "all"}'),
+                    key: ValueKey(
+                      'p-${vm.needWantSegmentIndex}-${vm.selectedTagId ?? "all"}',
+                    ),
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
@@ -282,11 +286,35 @@ class _ShoppingListContent extends StatelessWidget {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: SegmentedButton<int>(
+            segments: const [
+              ButtonSegment<int>(
+                value: 0,
+                label: Text('All'),
+              ),
+              ButtonSegment<int>(
+                value: 1,
+                label: Text('Needs'),
+              ),
+              ButtonSegment<int>(
+                value: 2,
+                label: Text('Wants'),
+              ),
+            ],
+            selected: {vm.needWantSegmentIndex},
+            onSelectionChanged: (selection) {
+              if (selection.isEmpty) return;
+              vm.setNeedWantSegmentIndex(selection.first);
+            },
+          ),
+        ),
         // Tag filter chips (horizontal scroll)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: QuickFilterBar<TagModel>(
-            items: vm.tags,
+            items: vm.tagsForShopping,
             selectedItem: selectedTag,
             onItemSelected: (tag) => vm.setSelectedTag(tag?.id),
             getItemId: (tag) => tag.id,
@@ -304,7 +332,9 @@ class _ShoppingListContent extends StatelessWidget {
               child: child,
             ),
             child: KeyedSubtree(
-              key: ValueKey('filter-${vm.selectedTagId ?? "all"}'),
+              key: ValueKey(
+                'filter-${vm.needWantSegmentIndex}-${vm.selectedTagId ?? "all"}',
+              ),
               child: listBody,
             ),
           ),

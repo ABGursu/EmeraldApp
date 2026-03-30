@@ -27,6 +27,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
   late ShoppingPriority _selectedPriority;
   ColorCodedItem? _selectedTag;
   bool _rentInBalanceSheet = false;
+  bool _isNeed = true;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
     _noteController = TextEditingController(text: widget.item?.note ?? '');
     _selectedPriority = widget.item?.priority ?? ShoppingPriority.mid;
     _rentInBalanceSheet = widget.item?.rentInBalanceSheet ?? false;
+    _isNeed = widget.item?.isNeed ?? true;
 
     // Initialize tag selection
     if (widget.item?.tagId != null) {
@@ -77,13 +79,25 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
   Widget build(BuildContext context) {
     final vm = context.watch<ShoppingViewModel>();
     final isEditing = widget.item != null;
-    final tagItems = vm.tags
-        .map((t) => ColorCodedItem(
-              id: t.id,
-              name: t.name,
-              colorValue: t.colorValue,
-            ))
+    final tagItems = vm.tagsForShopping
+        .map(
+          (t) => ColorCodedItem(
+            id: t.id,
+            name: t.name,
+            colorValue: t.colorValue,
+          ),
+        )
         .toList();
+    if (_selectedTag != null &&
+        !tagItems.any((i) => i.id == _selectedTag!.id)) {
+      try {
+        final t = vm.tags.firstWhere((x) => x.id == _selectedTag!.id);
+        tagItems.insert(
+          0,
+          ColorCodedItem(id: t.id, name: t.name, colorValue: t.colorValue),
+        );
+      } catch (_) {}
+    }
 
     return SafeArea(
       child: Padding(
@@ -202,6 +216,29 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
+                Text(
+                  'Need or Want',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: true,
+                      label: Text('Need'),
+                    ),
+                    ButtonSegment<bool>(
+                      value: false,
+                      label: Text('Want'),
+                    ),
+                  ],
+                  selected: {_isNeed},
+                  onSelectionChanged: (selection) {
+                    if (selection.isEmpty) return;
+                    setState(() => _isNeed = selection.first);
+                  },
+                ),
+                const SizedBox(height: 16),
                 // Rent in Balance Sheet: reserve estimated price with yellow "Rented" tag
                 SwitchListTile(
                   title: const Text('Reserve estimated price in Balance Sheet'),
@@ -255,7 +292,12 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   onCreateNew: (name, color) async {
                     // Create new tag via BalanceViewModel
                     final balanceVm = context.read<BalanceViewModel>();
-                    final tagId = await balanceVm.addTag(name, color);
+                    final tagId = await balanceVm.addTag(
+                      name,
+                      color,
+                      showInBalance: false,
+                      showInShopping: true,
+                    );
                     await vm.loadTags(); // Reload tags in shopping view model
                     return ColorCodedItem(
                       id: tagId,
@@ -338,6 +380,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
             : _noteController.text.trim(),
         tagId: _selectedTag?.id,
         rentInBalanceSheet: _rentInBalanceSheet,
+        isNeed: _isNeed,
       );
       await vm.updateItem(updatedItem, balanceVm: balanceVm);
     } else {
@@ -351,6 +394,7 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
             : _noteController.text.trim(),
         tagId: _selectedTag?.id,
         rentInBalanceSheet: _rentInBalanceSheet,
+        isNeed: _isNeed,
         balanceVm: balanceVm,
       );
     }

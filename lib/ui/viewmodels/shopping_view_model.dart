@@ -30,8 +30,17 @@ class ShoppingViewModel extends ChangeNotifier {
   // Tag-based filtering (null means "All").
   String? _selectedTagId;
 
+  /// 0 = all, 1 = needs only, 2 = wants only
+  int _needWantSegmentIndex = 0;
+
   List<ShoppingItemModel> get items => _items;
   List<TagModel> get tags => _tags;
+
+  /// Tags visible in Shopping List (filter chips and item tag picker).
+  List<TagModel> get tagsForShopping =>
+      _tags.where((t) => t.showInShopping).toList();
+
+  int get needWantSegmentIndex => _needWantSegmentIndex;
   bool get isLoading => _loading;
   bool get autoDeleteExpense => _autoDeleteExpense;
 
@@ -40,6 +49,22 @@ class ShoppingViewModel extends ChangeNotifier {
   void setSelectedTag(String? tagId) {
     _selectedTagId = tagId;
     notifyListeners();
+  }
+
+  void setNeedWantSegmentIndex(int index) {
+    _needWantSegmentIndex = index.clamp(0, 2);
+    notifyListeners();
+  }
+
+  bool _passesNeedWantFilter(ShoppingItemModel item) {
+    switch (_needWantSegmentIndex) {
+      case 1:
+        return item.isNeed;
+      case 2:
+        return !item.isNeed;
+      default:
+        return true;
+    }
   }
 
   /// Get unpurchased items (main list)
@@ -58,6 +83,7 @@ class ShoppingViewModel extends ChangeNotifier {
 
     return _items
         .where((item) => !item.isPurchased)
+        .where(_passesNeedWantFilter)
         .where((item) {
           if (_selectedTagId == null) return true;
 
@@ -85,6 +111,7 @@ class ShoppingViewModel extends ChangeNotifier {
   List<ShoppingItemModel> get purchasedItems {
     return _items
         .where((item) => item.isPurchased)
+        .where(_passesNeedWantFilter)
         .where((item) => _selectedTagId == null || item.tagId == _selectedTagId)
         .toList()
       ..sort((a, b) {
@@ -118,6 +145,13 @@ class ShoppingViewModel extends ChangeNotifier {
 
   Future<void> loadTags() async {
     _tags = await _balanceRepository.getAllTags();
+    if (_selectedTagId != null) {
+      final stillVisible =
+          _tags.any((t) => t.id == _selectedTagId && t.showInShopping);
+      if (!stillVisible) {
+        _selectedTagId = null;
+      }
+    }
     notifyListeners();
   }
 
@@ -157,6 +191,8 @@ class ShoppingViewModel extends ChangeNotifier {
       name: 'Shopping',
       colorValue: 0xFFD2B48C, // Light Brown
       createdAt: DateTime.now(),
+      showInBalance: true,
+      showInShopping: true,
     );
     final id = await _balanceRepository.createTag(newTag);
     await loadTags(); // Reload tags
@@ -194,6 +230,8 @@ class ShoppingViewModel extends ChangeNotifier {
       name: 'Rented',
       colorValue: _rentedTagColor,
       createdAt: DateTime.now(),
+      showInBalance: true,
+      showInShopping: true,
     );
     final id = await _balanceRepository.createTag(newTag);
     await loadTags();
@@ -208,6 +246,7 @@ class ShoppingViewModel extends ChangeNotifier {
     String? note,
     String? tagId,
     bool rentInBalanceSheet = false,
+    bool isNeed = true,
     BalanceViewModel? balanceVm,
   }) async {
     // If no tag provided, use default "Shopping" tag
@@ -222,6 +261,7 @@ class ShoppingViewModel extends ChangeNotifier {
       note: note,
       tagId: finalTagId,
       rentInBalanceSheet: rentInBalanceSheet,
+      isNeed: isNeed,
       createdAt: DateTime.now(),
     );
 

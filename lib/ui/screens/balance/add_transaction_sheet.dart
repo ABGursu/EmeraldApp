@@ -22,6 +22,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   DateTime _selectedDate = DateTime.now();
   bool _isExpense = true;
   ColorCodedItem? _selectedTag;
+  bool _initializedEditTag = false;
 
   @override
   void initState() {
@@ -33,6 +34,29 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _selectedDate = tx.date;
       _noteController.text = tx.note ?? '';
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_initializedEditTag || widget.transaction == null) return;
+    final tx = widget.transaction!;
+    if (tx.tagId == null) {
+      _initializedEditTag = true;
+      return;
+    }
+    final vm = context.read<BalanceViewModel>();
+    for (final t in vm.tags) {
+      if (t.id == tx.tagId) {
+        _selectedTag = ColorCodedItem(
+          id: t.id,
+          name: t.name,
+          colorValue: t.colorValue,
+        );
+        break;
+      }
+    }
+    _initializedEditTag = true;
   }
 
   @override
@@ -69,20 +93,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<BalanceViewModel>();
-    final items = vm.tags
-        .map((t) => ColorCodedItem(id: t.id, name: t.name, colorValue: t.colorValue))
+    final items = vm.tagsForBalance
+        .map(
+          (t) =>
+              ColorCodedItem(id: t.id, name: t.name, colorValue: t.colorValue),
+        )
         .toList();
-    
-    // Initialize tag selection if editing (only once)
-    if (widget.transaction != null && _selectedTag == null && items.isNotEmpty) {
-      final tx = widget.transaction!;
-      if (tx.tagId != null) {
-        _selectedTag = items.firstWhere(
-          (t) => t.id == tx.tagId,
-          orElse: () => const ColorCodedItem(id: '', name: '', colorValue: 0),
-        );
-      }
-    }
 
     return SafeArea(
       child: Padding(
@@ -172,7 +188,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   onChanged: (item) => _selectedTag = item,
                   validator: (item) => item == null ? 'Select a tag' : null,
                   onCreateNew: (name, color) async {
-                    final id = await vm.addTag(name, color);
+                    final id = await vm.addTag(
+                      name,
+                      color,
+                      showInBalance: true,
+                      showInShopping: false,
+                    );
                     final newItem = ColorCodedItem(id: id, name: name, colorValue: color);
                     _selectedTag = newItem;
                     return newItem;

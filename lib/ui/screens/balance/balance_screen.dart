@@ -20,7 +20,7 @@ class BalanceScreen extends StatelessWidget {
       builder: (context, vm, _) {
         TagModel? selectedTag;
         if (vm.selectedTagId != null) {
-          for (final t in vm.tags) {
+          for (final t in vm.tagsForBalance) {
             if (t.id == vm.selectedTagId) {
               selectedTag = t;
               break;
@@ -132,7 +132,7 @@ class BalanceScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       child: QuickFilterBar<TagModel>(
-                        items: vm.tags,
+                        items: vm.tagsForBalance,
                         selectedItem: selectedTag,
                         onItemSelected: (tag) {
                           vm.setSelectedTag(tag?.id);
@@ -180,11 +180,13 @@ class BalanceScreen extends StatelessWidget {
                                 child: _TransactionList(
                                   grouped: grouped,
                                   tags: vm.tags
-                                      .map((t) => ColorCodedItem(
-                                            id: t.id,
-                                            name: t.name,
-                                            colorValue: t.colorValue,
-                                          ))
+                                      .map(
+                                        (t) => ColorCodedItem(
+                                          id: t.id,
+                                          name: t.name,
+                                          colorValue: t.colorValue,
+                                        ),
+                                      )
                                       .toList(),
                                 ),
                               ),

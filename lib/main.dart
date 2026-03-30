@@ -15,6 +15,7 @@ import 'ui/viewmodels/habit_view_model.dart';
 import 'ui/viewmodels/shopping_view_model.dart';
 import 'ui/viewmodels/supplement_view_model.dart';
 import 'ui/viewmodels/todo_view_model.dart';
+import 'ui/viewmodels/tab_inspector_view_model.dart';
 import 'ui/viewmodels/home_layout_view_model.dart';
 
 Future<void> main() async {
@@ -63,6 +64,9 @@ class EmeraldApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => TodoViewModel()..init(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => TabInspectorViewModel()..init(),
         ),
         ChangeNotifierProvider(
           create: (_) => BioMechanicViewModel()..init(),
