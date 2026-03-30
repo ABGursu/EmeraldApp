@@ -25,11 +25,46 @@ class HomeLayoutViewModel extends ChangeNotifier {
   static List<HomeMenuItem> getDefaultMenuItems() {
     return [
       HomeMenuItem(
+        id: 'shopping',
+        title: 'Shopping List',
+        icon: Icons.shopping_cart_outlined,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const ShoppingListScreen(),
+      ),
+      HomeMenuItem(
         id: 'balance',
         title: 'Balance Sheet',
         icon: Icons.account_balance_wallet,
         color: const Color(0xFF00E5FF),
         buildScreen: () => const BalanceScreen(),
+      ),
+      HomeMenuItem(
+        id: 'todo',
+        title: 'Todo List',
+        icon: Icons.checklist,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const TodoListScreen(),
+      ),
+      HomeMenuItem(
+        id: 'habit',
+        title: 'Habit Logger',
+        icon: Icons.track_changes,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const HabitHubScreen(),
+      ),
+      HomeMenuItem(
+        id: 'calendar',
+        title: 'Calendar & Diary',
+        icon: Icons.calendar_today,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const CalendarHubScreen(),
+      ),
+      HomeMenuItem(
+        id: 'tab_inspector',
+        title: 'Tab Inspector',
+        icon: Icons.search,
+        color: const Color(0xFF00E5FF),
+        buildScreen: () => const TabInspectorScreen(),
       ),
       HomeMenuItem(
         id: 'exercise',
@@ -44,41 +79,6 @@ class HomeLayoutViewModel extends ChangeNotifier {
         icon: Icons.medication_outlined,
         color: const Color(0xFF00E5FF),
         buildScreen: () => const SupplementHubScreen(),
-      ),
-      HomeMenuItem(
-        id: 'habit',
-        title: 'Habit Logger',
-        icon: Icons.track_changes,
-        color: const Color(0xFF00E5FF),
-        buildScreen: () => const HabitHubScreen(),
-      ),
-      HomeMenuItem(
-        id: 'shopping',
-        title: 'Shopping List',
-        icon: Icons.shopping_cart_outlined,
-        color: const Color(0xFF00E5FF),
-        buildScreen: () => const ShoppingListScreen(),
-      ),
-      HomeMenuItem(
-        id: 'calendar',
-        title: 'Calendar & Diary',
-        icon: Icons.calendar_today,
-        color: const Color(0xFF00E5FF),
-        buildScreen: () => const CalendarHubScreen(),
-      ),
-      HomeMenuItem(
-        id: 'todo',
-        title: 'Todo List',
-        icon: Icons.checklist,
-        color: const Color(0xFF00E5FF),
-        buildScreen: () => const TodoListScreen(),
-      ),
-      HomeMenuItem(
-        id: 'tab_inspector',
-        title: 'Tab Inspector',
-        icon: Icons.tab_outlined,
-        color: const Color(0xFF00E5FF),
-        buildScreen: () => const TabInspectorScreen(),
       ),
       HomeMenuItem(
         id: 'backup',

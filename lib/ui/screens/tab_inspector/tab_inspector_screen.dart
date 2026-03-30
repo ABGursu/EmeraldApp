@@ -65,7 +65,7 @@ class TabInspectorScreen extends StatelessWidget {
                               child: Column(
                                 children: [
                                   Icon(
-                                    Icons.tab_outlined,
+                                    Icons.search,
                                     size: 64,
                                     color: Theme.of(context)
                                         .colorScheme
