@@ -6,7 +6,7 @@ import '../../../data/models/shopping_priority.dart';
 import '../../../data/models/tag_model.dart';
 import '../../../ui/viewmodels/balance_view_model.dart';
 import '../../../ui/viewmodels/shopping_view_model.dart';
-import '../../widgets/quick_filter_bar.dart';
+import '../../widgets/tag_filter_dropdown.dart';
 import 'add_edit_shopping_item_sheet.dart';
 import 'mark_purchased_dialog.dart';
 import 'shopping_settings_sheet.dart';
@@ -160,18 +160,8 @@ class _ShoppingListContent extends StatelessWidget {
     final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
     final bottomPadding = 16 + bottomSafe;
 
-    TagModel? selectedTag;
-    if (vm.selectedTagId != null) {
-      for (final t in vm.tagsForShopping) {
-        if (t.id == vm.selectedTagId) {
-          selectedTag = t;
-          break;
-        }
-      }
-    }
-
     final filteredCount = unpurchased.length + purchased.length;
-    final isTagFilterActive = vm.selectedTagId != null;
+    final isTagFilterActive = vm.hasTagFilter;
     final isNeedWantFilterActive = vm.needWantSegmentIndex != 0;
     final hasAnyItems = vm.items.isNotEmpty;
 
@@ -260,7 +250,7 @@ class _ShoppingListContent extends StatelessWidget {
                   ),
                   child: ListView.builder(
                     key: ValueKey(
-                      'p-${vm.needWantSegmentIndex}-${vm.selectedTagId ?? "all"}',
+                      'p-${vm.needWantSegmentIndex}-${vm.selectedTagsKey}',
                     ),
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -317,17 +307,14 @@ class _ShoppingListContent extends StatelessWidget {
             ),
           ),
         ),
-        // Tag filter chips (horizontal scroll)
+        // Tag filter dropdown with 2-column matrix
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: QuickFilterBar<TagModel>(
-            items: vm.tagsForShopping,
-            selectedItem: selectedTag,
-            onItemSelected: (tag) => vm.setSelectedTag(tag?.id),
-            getItemId: (tag) => tag.id,
-            getItemName: (tag) => tag.name,
-            getItemColor: (tag) => tag.colorValue,
-            allOptionLabel: 'All',
+          child: TagFilterDropdown(
+            tags: vm.tagsForShopping,
+            selectedTagIds: vm.selectedTagIds,
+            onSelectionChanged: vm.setSelectedTags,
+            label: 'Tags',
           ),
         ),
         // List body: fade when the tag filter changes
@@ -340,7 +327,7 @@ class _ShoppingListContent extends StatelessWidget {
             ),
             child: KeyedSubtree(
               key: ValueKey(
-                'filter-${vm.needWantSegmentIndex}-${vm.selectedTagId ?? "all"}',
+                'filter-${vm.needWantSegmentIndex}-${vm.selectedTagsKey}',
               ),
               child: listBody,
             ),

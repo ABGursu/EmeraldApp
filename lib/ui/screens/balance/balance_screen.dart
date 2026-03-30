@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/tag_model.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../ui/viewmodels/balance_view_model.dart';
 import '../../../utils/date_formats.dart';
 import '../../widgets/color_coded_selector.dart';
-import '../../widgets/quick_filter_bar.dart';
+import '../../widgets/tag_filter_dropdown.dart';
 import 'add_transaction_sheet.dart';
 import 'edit_tag_sheet.dart';
 import 'pie_chart_sheet.dart';
@@ -18,19 +17,8 @@ class BalanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BalanceViewModel>(
       builder: (context, vm, _) {
-        TagModel? selectedTag;
-        if (vm.selectedTagId != null) {
-          for (final t in vm.tagsForBalance) {
-            if (t.id == vm.selectedTagId) {
-              selectedTag = t;
-              break;
-            }
-          }
-        }
-
         final grouped = vm.groupedByDate;
-        final isTagFilteredEmpty =
-            vm.selectedTagId != null && grouped.isEmpty;
+        final isTagFilteredEmpty = vm.hasTagFilter && grouped.isEmpty;
 
         return Scaffold(
           appBar: AppBar(
@@ -127,17 +115,15 @@ class BalanceScreen extends StatelessWidget {
                   children: [
                     _CurrentBalanceCard(balance: vm.currentBalance),
                     _BudgetOverviewCard(vm: vm),
-                    // Tag filter chips (horizontal scroll)
+                    // Tag filter dropdown with 2-column matrix
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
-                      child: QuickFilterBar<TagModel>(
-                        items: vm.tagsForBalance,
-                        selectedItem: selectedTag,
-                        onItemSelected: (tag) {
-                          vm.setSelectedTag(tag?.id);
-                        },
-                        onItemLongPress: (tag) {
+                      child: TagFilterDropdown(
+                        tags: vm.tagsForBalance,
+                        selectedTagIds: vm.selectedTagIds,
+                        onSelectionChanged: vm.setSelectedTags,
+                        onTagLongPress: (tag) {
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true,
@@ -147,10 +133,7 @@ class BalanceScreen extends StatelessWidget {
                             ),
                           );
                         },
-                        getItemId: (tag) => tag.id,
-                        getItemName: (tag) => tag.name,
-                        getItemColor: (tag) => tag.colorValue,
-                        allOptionLabel: 'All',
+                        label: 'Tags',
                       ),
                     ),
                     Expanded(
@@ -163,7 +146,7 @@ class BalanceScreen extends StatelessWidget {
                         child: isTagFilteredEmpty
                             ? Center(
                                 key: ValueKey(
-                                    'no-${vm.selectedTagId ?? "all"}'),
+                                    'no-${vm.selectedTagsKey}'),
                                 child: Padding(
                                   padding: const EdgeInsets.all(24),
                                   child: Text(
@@ -176,7 +159,7 @@ class BalanceScreen extends StatelessWidget {
                               )
                             : KeyedSubtree(
                                 key: ValueKey(
-                                    'tx-${vm.selectedTagId ?? "all"}'),
+                                    'tx-${vm.selectedTagsKey}'),
                                 child: _TransactionList(
                                   grouped: grouped,
                                   tags: vm.tags

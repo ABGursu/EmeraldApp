@@ -29,12 +29,12 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   bool _isRollingDate = false;
 
   // Tag filtering
-  String? _selectedTagId;
+  Set<String> _selectedTagIds = {};
   String _tagSearchQuery = '';
 
   // Cache for groupedByDate to avoid recalculation on every access
   Map<DateTime, List<TransactionModel>>? _groupedByDateCache;
-  String? _cachedGroupedTagId;
+  String? _cachedGroupedTagKey;
   int? _cachedTransactionsHash; // Simple hash based on list length and first/last transaction IDs
 
   // Fiscal month settings
@@ -47,7 +47,13 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   DateTime? get filterEndDate => _filterEndDate;
   bool get isRollingDate => _isRollingDate;
   int get budgetStartDay => _budgetStartDay;
-  String? get selectedTagId => _selectedTagId;
+  Set<String> get selectedTagIds => Set.unmodifiable(_selectedTagIds);
+  bool get hasTagFilter => _selectedTagIds.isNotEmpty;
+  String get selectedTagsKey {
+    if (_selectedTagIds.isEmpty) return 'all';
+    final ids = _selectedTagIds.toList()..sort();
+    return ids.join(',');
+  }
   String get tagSearchQuery => _tagSearchQuery;
 
   List<TransactionModel> get transactions => _transactions;
@@ -71,7 +77,18 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   /// Sets the selected tag filter
   void setSelectedTag(String? tagId) {
-    _selectedTagId = tagId;
+    if (tagId == null) {
+      _selectedTagIds = {};
+    } else {
+      _selectedTagIds = {tagId};
+    }
+    _groupedByDateCache = null; // Invalidate cache
+    notifyListeners();
+  }
+
+  /// Sets selected tag filters (empty means "All")
+  void setSelectedTags(Set<String> tagIds) {
+    _selectedTagIds = Set<String>.from(tagIds);
     _groupedByDateCache = null; // Invalidate cache
     notifyListeners();
   }
@@ -94,7 +111,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   Future<void> resetAll() async {
     await _repository.resetAll();
     _groupedByDateCache = null;
-    _cachedGroupedTagId = null;
+    _cachedGroupedTagKey = null;
     _cachedTransactionsHash = null;
     await loadTransactions();
     await loadCurrentBudget();
@@ -234,13 +251,16 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
 
   Future<void> loadTags() async {
     _tags = await _repository.getAllTags();
-    if (_selectedTagId != null) {
-      final stillVisible =
-          _tags.any((t) => t.id == _selectedTagId && t.showInBalance);
-      if (!stillVisible) {
-        _selectedTagId = null;
+    if (_selectedTagIds.isNotEmpty) {
+      final visibleIds = _tags
+          .where((t) => t.showInBalance)
+          .map((t) => t.id)
+          .toSet();
+      final retained = _selectedTagIds.where(visibleIds.contains).toSet();
+      if (retained.length != _selectedTagIds.length) {
+        _selectedTagIds = retained;
         _groupedByDateCache = null;
-        _cachedGroupedTagId = null;
+        _cachedGroupedTagKey = null;
       }
     }
     notifyListeners();
@@ -376,14 +396,16 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     
     // Check if cache is still valid
     if (_groupedByDateCache != null &&
-        _cachedGroupedTagId == _selectedTagId &&
+        _cachedGroupedTagKey == selectedTagsKey &&
         _cachedTransactionsHash == currentHash) {
       return _groupedByDateCache!;
     }
 
     // Apply tag filter if set
-    final filteredTransactions = _selectedTagId != null
-        ? _transactions.where((tx) => tx.tagId == _selectedTagId).toList()
+    final filteredTransactions = _selectedTagIds.isNotEmpty
+        ? _transactions
+            .where((tx) => tx.tagId != null && _selectedTagIds.contains(tx.tagId))
+            .toList()
         : _transactions;
 
     final Map<DateTime, List<TransactionModel>> grouped = {};
@@ -396,7 +418,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     
     // Update cache
     _groupedByDateCache = {for (final k in sortedKeys) k: grouped[k]!};
-    _cachedGroupedTagId = _selectedTagId;
+    _cachedGroupedTagKey = selectedTagsKey;
     _cachedTransactionsHash = currentHash;
     
     return _groupedByDateCache!;

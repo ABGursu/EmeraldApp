@@ -28,7 +28,7 @@ class ShoppingViewModel extends ChangeNotifier {
   bool _autoDeleteExpense = false; // Default: false
 
   // Tag-based filtering (null means "All").
-  String? _selectedTagId;
+  Set<String> _selectedTagIds = {};
 
   /// 0 = all, 1 = needs only, 2 = wants only
   int _needWantSegmentIndex = 0;
@@ -44,10 +44,25 @@ class ShoppingViewModel extends ChangeNotifier {
   bool get isLoading => _loading;
   bool get autoDeleteExpense => _autoDeleteExpense;
 
-  String? get selectedTagId => _selectedTagId;
+  Set<String> get selectedTagIds => Set.unmodifiable(_selectedTagIds);
+  bool get hasTagFilter => _selectedTagIds.isNotEmpty;
+  String get selectedTagsKey {
+    if (_selectedTagIds.isEmpty) return 'all';
+    final ids = _selectedTagIds.toList()..sort();
+    return ids.join(',');
+  }
 
   void setSelectedTag(String? tagId) {
-    _selectedTagId = tagId;
+    if (tagId == null) {
+      _selectedTagIds = {};
+    } else {
+      _selectedTagIds = {tagId};
+    }
+    notifyListeners();
+  }
+
+  void setSelectedTags(Set<String> tagIds) {
+    _selectedTagIds = Set<String>.from(tagIds);
     notifyListeners();
   }
 
@@ -85,18 +100,18 @@ class ShoppingViewModel extends ChangeNotifier {
         .where((item) => !item.isPurchased)
         .where(_passesNeedWantFilter)
         .where((item) {
-          if (_selectedTagId == null) return true;
+          if (_selectedTagIds.isEmpty) return true;
 
           // Special rule:
           // When the "Rented" chip is selected, include all items that are
           // currently reserved in the Balance Sheet, regardless of their
           // original item tagId.
-          if (_selectedTagId == rentedTagId) {
-            return item.rentInBalanceSheet;
-          }
+          final matchesRented =
+              _selectedTagIds.contains(rentedTagId) && item.rentInBalanceSheet;
+          final matchesOriginal =
+              item.tagId != null && _selectedTagIds.contains(item.tagId);
 
-          // Otherwise, match the item's original tagId.
-          return item.tagId == _selectedTagId;
+          return matchesRented || matchesOriginal;
         })
         .toList()
       ..sort((a, b) {
@@ -112,7 +127,9 @@ class ShoppingViewModel extends ChangeNotifier {
     return _items
         .where((item) => item.isPurchased)
         .where(_passesNeedWantFilter)
-        .where((item) => _selectedTagId == null || item.tagId == _selectedTagId)
+        .where((item) =>
+            _selectedTagIds.isEmpty ||
+            (item.tagId != null && _selectedTagIds.contains(item.tagId)))
         .toList()
       ..sort((a, b) {
         // Sort by purchase date (newest first)
@@ -145,12 +162,12 @@ class ShoppingViewModel extends ChangeNotifier {
 
   Future<void> loadTags() async {
     _tags = await _balanceRepository.getAllTags();
-    if (_selectedTagId != null) {
-      final stillVisible =
-          _tags.any((t) => t.id == _selectedTagId && t.showInShopping);
-      if (!stillVisible) {
-        _selectedTagId = null;
-      }
+    if (_selectedTagIds.isNotEmpty) {
+      final visibleIds = _tags
+          .where((t) => t.showInShopping)
+          .map((t) => t.id)
+          .toSet();
+      _selectedTagIds = _selectedTagIds.where(visibleIds.contains).toSet();
     }
     notifyListeners();
   }
