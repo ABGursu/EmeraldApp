@@ -288,26 +288,33 @@ class _ShoppingListContent extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment<int>(
-                value: 0,
-                label: Text('All'),
+          child: SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment<int>(
+                  value: 0,
+                  label: Text('All'),
+                ),
+                ButtonSegment<int>(
+                  value: 1,
+                  label: Text('Needs'),
+                ),
+                ButtonSegment<int>(
+                  value: 2,
+                  label: Text('Wants'),
+                ),
+              ],
+              selected: {vm.needWantSegmentIndex},
+              onSelectionChanged: (selection) {
+                if (selection.isEmpty) return;
+                vm.setNeedWantSegmentIndex(selection.first);
+              },
+              style: SegmentedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                textStyle: Theme.of(context).textTheme.labelLarge,
               ),
-              ButtonSegment<int>(
-                value: 1,
-                label: Text('Needs'),
-              ),
-              ButtonSegment<int>(
-                value: 2,
-                label: Text('Wants'),
-              ),
-            ],
-            selected: {vm.needWantSegmentIndex},
-            onSelectionChanged: (selection) {
-              if (selection.isEmpty) return;
-              vm.setNeedWantSegmentIndex(selection.first);
-            },
+            ),
           ),
         ),
         // Tag filter chips (horizontal scroll)

@@ -221,22 +221,29 @@ class _AddEditShoppingItemSheetState extends State<AddEditShoppingItemSheet> {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
-                SegmentedButton<bool>(
-                  segments: const [
-                    ButtonSegment<bool>(
-                      value: true,
-                      label: Text('Need'),
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(
+                        value: true,
+                        label: Text('Need'),
+                      ),
+                      ButtonSegment<bool>(
+                        value: false,
+                        label: Text('Want'),
+                      ),
+                    ],
+                    selected: {_isNeed},
+                    onSelectionChanged: (selection) {
+                      if (selection.isEmpty) return;
+                      setState(() => _isNeed = selection.first);
+                    },
+                    style: SegmentedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      textStyle: Theme.of(context).textTheme.labelLarge,
                     ),
-                    ButtonSegment<bool>(
-                      value: false,
-                      label: Text('Want'),
-                    ),
-                  ],
-                  selected: {_isNeed},
-                  onSelectionChanged: (selection) {
-                    if (selection.isEmpty) return;
-                    setState(() => _isNeed = selection.first);
-                  },
+                  ),
                 ),
                 const SizedBox(height: 16),
                 // Rent in Balance Sheet: reserve estimated price with yellow "Rented" tag
