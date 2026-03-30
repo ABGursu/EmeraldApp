@@ -539,25 +539,10 @@ class _FullColorPickerState extends State<_FullColorPicker> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    colors: List.generate(
-                      6,
-                      (i) =>
-                          HSVColor.fromAHSV(1.0, i * 60.0, 1.0, 1.0).toColor(),
-                    ),
-                  ),
-                ),
-                child: Slider(
-                  value: _hue,
-                  min: 0.0,
-                  max: 360.0,
-                  onChanged: (value) =>
-                      _updateColor(value, _saturation, _brightness),
-                ),
+              child: _HueSlider(
+                hue: _hue,
+                onChanged: (value) =>
+                    _updateColor(value, _saturation, _brightness),
               ),
             ),
           ],
@@ -603,6 +588,137 @@ class _ColorDot extends StatelessWidget {
       radius: 10,
       backgroundColor: Color(colorValue),
     );
+  }
+}
+
+class _HueSlider extends StatelessWidget {
+  const _HueSlider({
+    required this.hue,
+    required this.onChanged,
+  });
+
+  final double hue; // 0..360
+  final ValueChanged<double> onChanged;
+
+  static const double _thumbRadius = 10.0;
+  static const double _trackHeight = 10.0;
+  static const double _widgetHeight = 40.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final trackWidth = (constraints.maxWidth - (_thumbRadius * 2))
+            .clamp(1.0, double.infinity);
+        final clampedHue = hue.clamp(0.0, 360.0);
+        final ratio = (clampedHue / 360.0).clamp(0.0, 1.0);
+
+        // Thumb center X in local coordinates.
+        final thumbCenterX = _thumbRadius + ratio * trackWidth;
+        final thumbLeft = thumbCenterX - _thumbRadius;
+
+        final trackTop = (_widgetHeight - _trackHeight) / 2;
+
+        return SizedBox(
+          height: _widgetHeight,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) =>
+                _handleDx(details.localPosition.dx, trackWidth),
+            onPanDown: (details) =>
+                _handleDx(details.localPosition.dx, trackWidth),
+            onPanUpdate: (details) =>
+                _handleDx(details.localPosition.dx, trackWidth),
+            child: Stack(
+              children: [
+                // Gradient track: mapped to the same width used for hue math.
+                Positioned(
+                  left: _thumbRadius,
+                  top: trackTop,
+                  right: _thumbRadius,
+                  child: Container(
+                    height: _trackHeight,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(_trackHeight / 2),
+                      gradient: LinearGradient(
+                        // Hue 0° and 360° are both red.
+                        colors: [
+                          for (final h in <double>[
+                            0,
+                            60,
+                            120,
+                            180,
+                            240,
+                            300,
+                            360
+                          ])
+                            HSVColor.fromAHSV(1.0, h, 1.0, 1.0).toColor(),
+                        ],
+                        stops: const [
+                          0.0,
+                          1.0 / 6.0,
+                          2.0 / 6.0,
+                          3.0 / 6.0,
+                          4.0 / 6.0,
+                          5.0 / 6.0,
+                          1.0,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Thumb
+                Positioned(
+                  left: thumbLeft,
+                  top: (_widgetHeight / 2) - _thumbRadius,
+                  child: Container(
+                    width: _thumbRadius * 2,
+                    height: _thumbRadius * 2,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: HSVColor.fromAHSV(1.0, clampedHue, 1.0, 1.0)
+                              .toColor(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Convert pointer x (local coordinates) -> hue (0..360).
+  // We align the gradient/track width to the same math used for thumb placement
+  // so that the visual hue and the output hue are always in sync.
+  double _handleDx(double dx, double trackWidth) {
+    final x = dx.clamp(_thumbRadius, _thumbRadius + trackWidth);
+    final ratio = (x - _thumbRadius) / trackWidth; // 0..1
+    final hue = (ratio * 360.0).clamp(0.0, 360.0);
+    onChanged(hue);
+    return hue;
   }
 }
 

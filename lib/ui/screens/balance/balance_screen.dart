@@ -228,7 +228,7 @@ class _BudgetOverviewCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             spreadRadius: 1,
           ),
@@ -271,7 +271,7 @@ class _BudgetOverviewCard extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withOpacity(0.6),
+                      .withValues(alpha: 0.6),
                 ),
           ),
           const SizedBox(height: 8),
@@ -282,7 +282,7 @@ class _BudgetOverviewCard extends StatelessWidget {
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
-                        .withOpacity(0.6),
+                        .withValues(alpha: 0.6),
                   ),
             )
           else ...[
@@ -477,13 +477,13 @@ class _CurrentBalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isPositive
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-              : Theme.of(context).colorScheme.error.withOpacity(0.5),
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
+              : Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 8,
             spreadRadius: 2,
           ),
@@ -498,7 +498,7 @@ class _CurrentBalanceCard extends StatelessWidget {
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withOpacity(0.7),
+                      .withValues(alpha: 0.7),
                 ),
           ),
           const SizedBox(height: 8),
@@ -597,7 +597,7 @@ class _TransactionList extends StatelessWidget {
                         color: Theme.of(context)
                             .colorScheme
                             .surfaceContainerHighest
-                            .withOpacity(0.5),
+                            .withValues(alpha: 0.5),
                         borderRadius: const BorderRadius.only(
                           bottomLeft: Radius.circular(12),
                           bottomRight: Radius.circular(12),
