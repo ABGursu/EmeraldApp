@@ -49,57 +49,70 @@ class TabInspectorScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child: ListView(
-                        padding: EdgeInsets.fromLTRB(16, 16, 16, 8 + bottomSafe),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            'To review (${open.length})',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Text(
+                              'To review (${open.length})',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          if (open.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 32),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.search,
-                                    size: 64,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withValues(alpha: 0.35),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'No tabs to review',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Tap + to save a link. A preview loads in the background.',
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          Expanded(
+                            child: open.isEmpty
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.search,
+                                          size: 64,
                                           color: Theme.of(context)
                                               .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.65),
+                                              .primary
+                                              .withValues(alpha: 0.35),
                                         ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'No tabs to review',
+                                          style: Theme.of(context).textTheme.titleMedium,
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Tap + to save a link. A preview loads in the background.',
+                                          textAlign: TextAlign.center,
+                                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.65),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : ReorderableListView.builder(
+                                    padding: EdgeInsets.fromLTRB(16, 0, 16, 8 + bottomSafe),
+                                    itemCount: open.length,
+                                    onReorder: vm.reorderOpenItems,
+                                    itemBuilder: (context, index) {
+                                      final item = open[index];
+                                      return _TabCard(
+                                        key: ValueKey(item.id),
+                                        item: item,
+                                        reorderableIndex: index,
+                                        onOpen: () => _openLink(context, item.url),
+                                        onDoneChanged: (v) => vm.setDone(item.id, v ?? false),
+                                        onDelete: () => vm.deleteItem(item.id),
+                                      );
+                                    },
                                   ),
-                                ],
-                              ),
-                            )
-                          else
-                            ...open.map(
-                              (item) => _TabCard(
-                                item: item,
-                                onOpen: () => _openLink(context, item.url),
-                                onDoneChanged: (v) => vm.setDone(item.id, v ?? false),
-                                onDelete: () => vm.deleteItem(item.id),
-                              ),
-                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -123,6 +136,7 @@ class TabInspectorScreen extends StatelessWidget {
                               itemBuilder: (context, index) {
                                 final item = done[index];
                                 return _TabCard(
+                                  key: ValueKey(item.id),
                                   item: item,
                                   onOpen: () => _openLink(context, item.url),
                                   onDoneChanged: (v) => vm.setDone(item.id, v ?? false),
@@ -165,16 +179,20 @@ class TabInspectorScreen extends StatelessWidget {
 
 class _TabCard extends StatelessWidget {
   const _TabCard({
+    super.key,
     required this.item,
     required this.onOpen,
     required this.onDoneChanged,
     required this.onDelete,
+    this.reorderableIndex,
   });
 
   final TabInspectorItem item;
   final VoidCallback onOpen;
   final ValueChanged<bool?> onDoneChanged;
   final VoidCallback onDelete;
+  /// When set, shows a drag handle for [ReorderableListView].
+  final int? reorderableIndex;
 
   static const double _thumbW = 88;
   static const double _thumbH = 56;
@@ -193,6 +211,18 @@ class _TabCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (reorderableIndex != null) ...[
+                ReorderableDragStartListener(
+                  index: reorderableIndex!,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(
+                      Icons.drag_handle,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
+              ],
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: SizedBox(

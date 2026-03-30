@@ -11,8 +11,17 @@ class SqlTabInspectorRepository implements ITabInspectorRepository {
   @override
   Future<String> create(TabInspectorItem item) async {
     final db = await _dbHelper.database;
-    await db.insert('tab_inspector_items', item.toMap());
-    return item.id;
+    var row = item;
+    if (!item.isDone) {
+      final r = await db.rawQuery(
+        'SELECT MIN(sort_order) AS m FROM tab_inspector_items WHERE is_done = 0',
+      );
+      final m = r.first['m'] as int?;
+      final nextOrder = m != null ? m - 1 : 0;
+      row = item.copyWith(sortOrder: nextOrder);
+    }
+    await db.insert('tab_inspector_items', row.toMap());
+    return row.id;
   }
 
   @override
@@ -41,7 +50,7 @@ class SqlTabInspectorRepository implements ITabInspectorRepository {
     final db = await _dbHelper.database;
     final rows = await db.query(
       'tab_inspector_items',
-      orderBy: 'created_at DESC',
+      orderBy: 'is_done ASC, sort_order ASC, created_at DESC',
     );
     return rows.map(TabInspectorItem.fromMap).toList();
   }

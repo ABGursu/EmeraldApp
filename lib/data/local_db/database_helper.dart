@@ -5,7 +5,7 @@ import 'prefilled_exercises_data.dart';
 
 class DatabaseHelper {
   static const String _dbName = 'emerald_app.db';
-  static const int _dbVersion = 31;
+  static const int _dbVersion = 32;
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
   Database? _database;
@@ -1090,6 +1090,27 @@ class DatabaseHelper {
     if (oldVersion < 31) {
       await _createTabInspectorTables(db);
     }
+    if (oldVersion < 32) {
+      try {
+        await db.execute(
+          'ALTER TABLE tab_inspector_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+        );
+      } catch (_) {
+        // Column may already exist
+      }
+      final rows = await db.query(
+        'tab_inspector_items',
+        orderBy: 'created_at DESC',
+      );
+      for (var i = 0; i < rows.length; i++) {
+        await db.update(
+          'tab_inspector_items',
+          {'sort_order': i},
+          where: 'id = ?',
+          whereArgs: [rows[i]['id']],
+        );
+      }
+    }
   }
 
   Future<void> _createTabInspectorTables(Database db) async {
@@ -1100,7 +1121,8 @@ class DatabaseHelper {
         url TEXT NOT NULL,
         is_done INTEGER NOT NULL DEFAULT 0,
         preview_image_url TEXT,
-        created_at INTEGER NOT NULL
+        created_at INTEGER NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }

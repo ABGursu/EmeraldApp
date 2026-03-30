@@ -40,6 +40,10 @@ class ShoppingViewModel extends ChangeNotifier {
   List<TagModel> get tagsForShopping =>
       _tags.where((t) => t.showInShopping).toList();
 
+  /// Shared tag filter list: both Balance and Shopping must be enabled.
+  List<TagModel> get tagsForSharedFilter =>
+      _tags.where((t) => t.showInBalance && t.showInShopping).toList();
+
   int get needWantSegmentIndex => _needWantSegmentIndex;
   bool get isLoading => _loading;
   bool get autoDeleteExpense => _autoDeleteExpense;
@@ -163,11 +167,9 @@ class ShoppingViewModel extends ChangeNotifier {
   Future<void> loadTags() async {
     _tags = await _balanceRepository.getAllTags();
     if (_selectedTagIds.isNotEmpty) {
-      final visibleIds = _tags
-          .where((t) => t.showInShopping)
-          .map((t) => t.id)
-          .toSet();
-      _selectedTagIds = _selectedTagIds.where(visibleIds.contains).toSet();
+      final filterIds =
+          tagsForSharedFilter.map((t) => t.id).toSet();
+      _selectedTagIds = _selectedTagIds.where(filterIds.contains).toSet();
     }
     notifyListeners();
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/home_menu_item.dart';
 import '../../../ui/viewmodels/home_layout_view_model.dart';
+import '../settings/tag_editor_screen.dart';
 
 class HomeLayoutSettingsScreen extends StatelessWidget {
   const HomeLayoutSettingsScreen({super.key});
@@ -35,28 +36,60 @@ class HomeLayoutSettingsScreen extends StatelessWidget {
             );
           }
 
+          final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
           return SafeArea(
-            child: ReorderableListView(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewPadding.bottom + 16,
-              ),
-              onReorder: (oldIndex, newIndex) {
-                // Adjust index for ReorderableListView
-                if (newIndex > oldIndex) {
-                  newIndex -= 1;
-                }
-                vm.moveItem(oldIndex, newIndex);
-              },
-              children: items.map((item) {
-                return _MenuItemTile(
-                  key: ValueKey(item.id),
-                  item: item,
-                  onToggleVisibility: () => vm.toggleVisibility(item.id),
-                );
-              }).toList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ReorderableListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    onReorder: (oldIndex, newIndex) {
+                      if (newIndex > oldIndex) {
+                        newIndex -= 1;
+                      }
+                      vm.moveItem(oldIndex, newIndex);
+                    },
+                    children: items.map((item) {
+                      return _MenuItemTile(
+                        key: ValueKey(item.id),
+                        item: item,
+                        onToggleVisibility: () => vm.toggleVisibility(item.id),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16 + bottomInset),
+                  child: Card(
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.label_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      title: const Text('Tag Editor'),
+                      subtitle: Text(
+                        'Rename, colors, and Balance / Shopping visibility',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.65),
+                            ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const TagEditorScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },

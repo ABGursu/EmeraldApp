@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/tag_model.dart';
+import '../../../data/system_tags.dart';
 import '../../../ui/viewmodels/balance_view_model.dart';
+import '../../../ui/viewmodels/shopping_view_model.dart';
 import '../../widgets/color_coded_selector.dart';
 
 /// Sheet for editing a tag (rename, change color, or delete)
@@ -46,6 +48,7 @@ class _EditTagSheetState extends State<EditTagSheet> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<BalanceViewModel>();
+    final isSystem = SystemTags.isSystemTag(widget.tag);
 
     return SafeArea(
       child: Padding(
@@ -63,7 +66,7 @@ class _EditTagSheetState extends State<EditTagSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Edit Tag',
+                  isSystem ? 'System tag' : 'Edit Tag',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                   IconButton(
@@ -76,23 +79,37 @@ class _EditTagSheetState extends State<EditTagSheet> {
                   ),
               ],
             ),
-            const SizedBox(height: 16),
+            if (isSystem) ...[
+              Text(
+                'Default tags stay on Balance and Shopping. Only the color can be changed.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Tag Name',
                 border: OutlineInputBorder(),
               ),
-              autofocus: true,
-              onChanged: (value) {
-                setState(() {
-                  _currentItem = ColorCodedItem(
-                    id: _currentItem.id,
-                    name: value,
-                    colorValue: _currentItem.colorValue,
-                  );
-                });
-              },
+              readOnly: isSystem,
+              autofocus: !isSystem,
+              onChanged: isSystem
+                  ? null
+                  : (value) {
+                      setState(() {
+                        _currentItem = ColorCodedItem(
+                          id: _currentItem.id,
+                          name: value,
+                          colorValue: _currentItem.colorValue,
+                        );
+                      });
+                    },
             ),
             const SizedBox(height: 16),
             ColorCodedSelectorFormField(
@@ -112,34 +129,52 @@ class _EditTagSheetState extends State<EditTagSheet> {
               onCreateNew: (name, color) async => _currentItem, // Not used
             ),
             const SizedBox(height: 8),
-            SwitchListTile(
-              title: const Text('Use in Balance Sheet'),
-              subtitle: const Text(
-                'Show this tag in Balance filters and when adding transactions',
+            if (!isSystem) ...[
+              SwitchListTile(
+                title: const Text('Use in Balance Sheet'),
+                subtitle: const Text(
+                  'Show this tag in Balance filters and when adding transactions',
+                ),
+                value: _showInBalance,
+                onChanged: (v) => setState(() => _showInBalance = v),
               ),
-              value: _showInBalance,
-              onChanged: (v) => setState(() => _showInBalance = v),
-            ),
-            SwitchListTile(
-              title: const Text('Use in Shopping List'),
-              subtitle: const Text(
-                'Show this tag in Shopping filters and when adding items',
+              SwitchListTile(
+                title: const Text('Use in Shopping List'),
+                subtitle: const Text(
+                  'Show this tag in Shopping filters and when adding items',
+                ),
+                value: _showInShopping,
+                onChanged: (v) => setState(() => _showInShopping = v),
               ),
-              value: _showInShopping,
-              onChanged: (v) => setState(() => _showInShopping = v),
-            ),
+            ] else ...[
+              const SwitchListTile(
+                title: Text('Use in Balance Sheet'),
+                subtitle: Text('Always on for default tags'),
+                value: true,
+                onChanged: null,
+              ),
+              const SwitchListTile(
+                title: Text('Use in Shopping List'),
+                subtitle: Text('Always on for default tags'),
+                value: true,
+                onChanged: null,
+              ),
+            ],
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: () => _showDeleteDialog(context, vm),
-                  child: Text(
-                    'Delete',
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                if (!isSystem)
+                  TextButton(
+                    onPressed: () => _showDeleteDialog(context, vm),
+                    child: Text(
+                      'Delete',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
+                if (!isSystem) const SizedBox(width: 8),
                 FilledButton(
                   onPressed: () => _saveTag(context, vm),
                   child: const Text('Save'),
@@ -153,21 +188,31 @@ class _EditTagSheetState extends State<EditTagSheet> {
   }
 
   Future<void> _saveTag(BuildContext context, BalanceViewModel vm) async {
-    if (_nameController.text.trim().isEmpty) {
+    final isSystem = SystemTags.isSystemTag(widget.tag);
+    if (!isSystem && _nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tag name cannot be empty')),
       );
       return;
     }
 
-    final updatedTag = widget.tag.copyWith(
-      name: _nameController.text.trim(),
-      colorValue: _currentItem.colorValue,
-      showInBalance: _showInBalance,
-      showInShopping: _showInShopping,
-    );
+    final updatedTag = isSystem
+        ? widget.tag.copyWith(
+            colorValue: _currentItem.colorValue,
+            showInBalance: true,
+            showInShopping: true,
+          )
+        : widget.tag.copyWith(
+            name: _nameController.text.trim(),
+            colorValue: _currentItem.colorValue,
+            showInBalance: _showInBalance,
+            showInShopping: _showInShopping,
+          );
 
     await vm.updateTag(updatedTag);
+    if (context.mounted) {
+      await context.read<ShoppingViewModel>().loadTags();
+    }
     if (context.mounted) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -206,6 +251,9 @@ class _EditTagSheetState extends State<EditTagSheet> {
 
     if (confirmed == true && context.mounted) {
       await vm.deleteTag(widget.tag.id);
+      if (context.mounted) {
+        await context.read<ShoppingViewModel>().loadTags();
+      }
       if (context.mounted) {
         Navigator.of(context).pop(); // Close edit sheet
         ScaffoldMessenger.of(context).showSnackBar(

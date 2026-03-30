@@ -104,4 +104,19 @@ class TabInspectorViewModel extends ChangeNotifier {
     await _repository.delete(id);
     await loadItems();
   }
+
+  /// Persists order for open items only (0 .. n-1).
+  Future<void> reorderOpenItems(int oldIndex, int newIndex) async {
+    final open = openItems.toList();
+    if (oldIndex < 0 || oldIndex >= open.length) return;
+    if (newIndex < 0 || newIndex > open.length) return;
+    var dest = newIndex;
+    if (dest > oldIndex) dest -= 1;
+    final moved = open.removeAt(oldIndex);
+    open.insert(dest, moved);
+    for (var i = 0; i < open.length; i++) {
+      await _repository.update(open[i].copyWith(sortOrder: i));
+    }
+    await loadItems();
+  }
 }

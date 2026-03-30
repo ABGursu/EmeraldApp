@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/system_tags.dart';
+
 /// Simple value object for color-coded entities (Tag, ExerciseType, etc).
 class ColorCodedItem {
   final String id;
@@ -187,11 +189,13 @@ class _ColorCodedSelectorSheetState extends State<_ColorCodedSelectorSheet> {
 
   Future<void> _editItem(ColorCodedItem item) async {
     if (widget.onEditItem == null) return;
+    final nameLocked = SystemTags.isSystemTagName(item.name);
     final result = await showModalBottomSheet<ColorCodedItem>(
       context: context,
       isScrollControlled: true,
       builder: (_) => _EditColorCodedItemSheet(
         item: item,
+        nameLocked: nameLocked,
         onSave: (name, color) => widget.onEditItem!(item, name, color),
       ),
     );
@@ -261,6 +265,7 @@ class _ColorCodedSelectorSheetState extends State<_ColorCodedSelectorSheet> {
               Column(
                 children: widget.items.map((item) {
                   final selected = item.id == widget.selectedId;
+                  final isSystem = SystemTags.isSystemTagName(item.name);
                   return Card(
                     child: ListTile(
                       leading: _ColorDot(colorValue: item.colorValue),
@@ -268,7 +273,7 @@ class _ColorCodedSelectorSheetState extends State<_ColorCodedSelectorSheet> {
                       selected: selected,
                       onTap: () => _selectAndClose(item),
                       trailing: (widget.onEditItem != null ||
-                              widget.onDeleteItem != null)
+                              (widget.onDeleteItem != null && !isSystem))
                           ? PopupMenuButton<String>(
                               onSelected: (value) {
                                 if (value == 'edit') {
@@ -279,17 +284,17 @@ class _ColorCodedSelectorSheetState extends State<_ColorCodedSelectorSheet> {
                               },
                               itemBuilder: (context) => [
                                 if (widget.onEditItem != null)
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'edit',
                                     child: Row(
                                       children: [
-                                        Icon(Icons.edit, size: 20),
-                                        SizedBox(width: 8),
-                                        Text('Edit'),
+                                        const Icon(Icons.edit, size: 20),
+                                        const SizedBox(width: 8),
+                                        Text(isSystem ? 'Edit color' : 'Edit'),
                                       ],
                                     ),
                                   ),
-                                if (widget.onDeleteItem != null)
+                                if (widget.onDeleteItem != null && !isSystem)
                                   const PopupMenuItem(
                                     value: 'delete',
                                     child: Row(
@@ -725,10 +730,12 @@ class _HueSlider extends StatelessWidget {
 class _EditColorCodedItemSheet extends StatefulWidget {
   const _EditColorCodedItemSheet({
     required this.item,
+    this.nameLocked = false,
     required this.onSave,
   });
 
   final ColorCodedItem item;
+  final bool nameLocked;
   final Future<ColorCodedItem> Function(String name, int colorValue) onSave;
 
   @override
@@ -807,7 +814,7 @@ class _EditColorCodedItemSheetState extends State<_EditColorCodedItemSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Edit',
+                      widget.nameLocked ? 'Edit color' : 'Edit',
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     IconButton(
@@ -817,14 +824,31 @@ class _EditColorCodedItemSheetState extends State<_EditColorCodedItemSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (widget.nameLocked)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'This default tag cannot be renamed.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                          ),
+                    ),
+                  ),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Name',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty ? 'Enter a name' : null,
+                  readOnly: widget.nameLocked,
+                  validator: widget.nameLocked
+                      ? null
+                      : (v) => v == null || v.trim().isEmpty
+                          ? 'Enter a name'
+                          : null,
                 ),
                 const SizedBox(height: 12),
                 _FullColorPicker(

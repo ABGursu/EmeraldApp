@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/tag_model.dart';
+import '../../data/system_tags.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/i_balance_repository.dart';
 import '../../data/repositories/sql_balance_repository.dart';
@@ -62,6 +63,11 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   /// Tags visible in Balance Sheet (filter chips and transaction picker).
   List<TagModel> get tagsForBalance =>
       _tags.where((t) => t.showInBalance).toList();
+
+  /// Tags shown in Balance/Shopping **shared** tag filter (both modules enabled).
+  /// If a tag is hidden from either side, it does not appear in the other module's filter.
+  List<TagModel> get tagsForSharedFilter =>
+      _tags.where((t) => t.showInBalance && t.showInShopping).toList();
 
   /// Filtered tags based on search query (balance-visible only)
   List<TagModel> get filteredTags {
@@ -252,11 +258,9 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   Future<void> loadTags() async {
     _tags = await _repository.getAllTags();
     if (_selectedTagIds.isNotEmpty) {
-      final visibleIds = _tags
-          .where((t) => t.showInBalance)
-          .map((t) => t.id)
-          .toSet();
-      final retained = _selectedTagIds.where(visibleIds.contains).toSet();
+      final filterIds =
+          tagsForSharedFilter.map((t) => t.id).toSet();
+      final retained = _selectedTagIds.where(filterIds.contains).toSet();
       if (retained.length != _selectedTagIds.length) {
         _selectedTagIds = retained;
         _groupedByDateCache = null;
@@ -330,6 +334,14 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     bool showInBalance = true,
     bool showInShopping = true,
   }) async {
+    final key = name.trim().toLowerCase();
+    if (SystemTags.isSystemTagName(name)) {
+      for (final t in _tags) {
+        if (t.name.trim().toLowerCase() == key) {
+          return t.id;
+        }
+      }
+    }
     final tag = TagModel(
       id: generateId(),
       name: name,
@@ -344,11 +356,30 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   }
 
   Future<void> updateTag(TagModel tag) async {
-    await _repository.updateTag(tag);
+    TagModel? existing;
+    for (final t in _tags) {
+      if (t.id == tag.id) {
+        existing = t;
+        break;
+      }
+    }
+    final TagModel toWrite = existing != null && SystemTags.isSystemTag(existing)
+        ? existing.copyWith(
+            colorValue: tag.colorValue,
+            showInBalance: true,
+            showInShopping: true,
+          )
+        : tag;
+    await _repository.updateTag(toWrite);
     await loadTags();
   }
 
   Future<void> deleteTag(String id) async {
+    for (final t in _tags) {
+      if (t.id == id && SystemTags.isSystemTag(t)) {
+        return;
+      }
+    }
     await _repository.deleteTag(id);
     await loadTags();
   }

@@ -311,7 +311,7 @@ class _ShoppingListContent extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TagFilterDropdown(
-            tags: vm.tagsForShopping,
+            tags: vm.tagsForSharedFilter,
             selectedTagIds: vm.selectedTagIds,
             onSelectionChanged: vm.setSelectedTags,
             label: 'Tags',
