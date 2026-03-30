@@ -6,6 +6,7 @@ import '../../../data/models/shopping_priority.dart';
 import '../../../data/models/tag_model.dart';
 import '../../../ui/viewmodels/balance_view_model.dart';
 import '../../../ui/viewmodels/shopping_view_model.dart';
+import '../../widgets/quick_filter_bar.dart';
 import 'add_edit_shopping_item_sheet.dart';
 import 'mark_purchased_dialog.dart';
 import 'shopping_settings_sheet.dart';
@@ -156,8 +157,30 @@ class _ShoppingListContent extends StatelessWidget {
     final unpurchased = vm.unpurchasedItems;
     final purchased = vm.purchasedItems;
 
-    if (unpurchased.isEmpty && purchased.isEmpty) {
-      return Center(
+    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+    final bottomPadding = 16 + bottomSafe;
+
+    TagModel? selectedTag;
+    if (vm.selectedTagId != null) {
+      for (final t in vm.tags) {
+        if (t.id == vm.selectedTagId) {
+          selectedTag = t;
+          break;
+        }
+      }
+    }
+
+    final filteredCount = unpurchased.length + purchased.length;
+    final isTagFilterActive = vm.selectedTagId != null;
+    final hasAnyItems = vm.items.isNotEmpty;
+
+    Widget listBody;
+    if (filteredCount == 0) {
+      final message = isTagFilterActive && hasAnyItems
+          ? 'No items found for this tag'
+          : 'No items yet';
+
+      listBody = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -168,85 +191,124 @@ class _ShoppingListContent extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No items yet',
+              message,
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap + to add your first shopping item',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                  ),
-            ),
+            if (message == 'No items yet') ...[
+              const SizedBox(height: 8),
+              Text(
+                'Tap + to add your first shopping item',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+              ),
+            ],
           ],
         ),
       );
-    }
-
-    final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
-    final bottomPadding = 16 + bottomSafe;
-
-    return Column(
-      children: [
-        // Unpurchased Items Section (grouped by priority with subtotals)
-        if (unpurchased.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'To Buy (${unpurchased.length})',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+    } else {
+      listBody = Column(
+        children: [
+          // Unpurchased Items Section (grouped by priority with subtotals)
+          if (unpurchased.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'To Buy (${unpurchased.length})',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: unpurchased.length > purchased.length ? 2 : 1,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+                children: [
+                  for (final priority in _priorityDisplayOrder) ...[
+                    ..._buildPrioritySection(context, unpurchased, priority, vm),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          // Purchased Items Section (Collapsible)
+          if (purchased.isNotEmpty) ...[
+            const Divider(height: 1),
+            ExpansionTile(
+              title: Text(
+                'Purchased (${purchased.length})',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
-            ),
-          ),
-          Expanded(
-            flex: unpurchased.length > purchased.length ? 2 : 1,
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
+              initiallyExpanded: false,
               children: [
-                for (final priority in _priorityDisplayOrder) ...[
-                  ..._buildPrioritySection(context, unpurchased, priority, vm),
-                ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: ListView.builder(
+                    key: ValueKey('p-${vm.selectedTagId ?? "all"}'),
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
+                    itemCount: purchased.length,
+                    itemBuilder: (context, index) {
+                      final item = purchased[index];
+                      return _ShoppingItemTile(
+                        item: item,
+                        vm: vm,
+                        isPurchased: true,
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
-          ),
+          ],
+          SizedBox(height: bottomSafe),
         ],
-        // Purchased Items Section (Collapsible)
-        if (purchased.isNotEmpty) ...[
-          const Divider(height: 1),
-          ExpansionTile(
-            title: Text(
-              'Purchased (${purchased.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Tag filter chips (horizontal scroll)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: QuickFilterBar<TagModel>(
+            items: vm.tags,
+            selectedItem: selectedTag,
+            onItemSelected: (tag) => vm.setSelectedTag(tag?.id),
+            getItemId: (tag) => tag.id,
+            getItemName: (tag) => tag.name,
+            getItemColor: (tag) => tag.colorValue,
+            allOptionLabel: 'All',
+          ),
+        ),
+        // List body: fade when the tag filter changes
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: child,
             ),
-            initiallyExpanded: false,
-            children: [
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomSafe),
-                itemCount: purchased.length,
-                itemBuilder: (context, index) {
-                  final item = purchased[index];
-                  return _ShoppingItemTile(
-                    item: item,
-                    vm: vm,
-                    isPurchased: true,
-                  );
-                },
-              ),
-            ],
+            child: KeyedSubtree(
+              key: ValueKey('filter-${vm.selectedTagId ?? "all"}'),
+              child: listBody,
+            ),
           ),
-        ],
-        SizedBox(height: bottomSafe),
+        ),
       ],
     );
   }

@@ -27,14 +27,52 @@ class ShoppingViewModel extends ChangeNotifier {
   bool _loading = false;
   bool _autoDeleteExpense = false; // Default: false
 
+  // Tag-based filtering (null means "All").
+  String? _selectedTagId;
+
   List<ShoppingItemModel> get items => _items;
   List<TagModel> get tags => _tags;
   bool get isLoading => _loading;
   bool get autoDeleteExpense => _autoDeleteExpense;
 
+  String? get selectedTagId => _selectedTagId;
+
+  void setSelectedTag(String? tagId) {
+    _selectedTagId = tagId;
+    notifyListeners();
+  }
+
   /// Get unpurchased items (main list)
   List<ShoppingItemModel> get unpurchasedItems {
-    return _items.where((item) => !item.isPurchased).toList()
+    final rentedTagId = _tags
+        .firstWhere(
+          (t) => t.name.toLowerCase() == 'rented',
+          orElse: () => TagModel(
+            id: '',
+            name: '',
+            colorValue: 0,
+            createdAt: DateTime.now(),
+          ),
+        )
+        .id;
+
+    return _items
+        .where((item) => !item.isPurchased)
+        .where((item) {
+          if (_selectedTagId == null) return true;
+
+          // Special rule:
+          // When the "Rented" chip is selected, include all items that are
+          // currently reserved in the Balance Sheet, regardless of their
+          // original item tagId.
+          if (_selectedTagId == rentedTagId) {
+            return item.rentInBalanceSheet;
+          }
+
+          // Otherwise, match the item's original tagId.
+          return item.tagId == _selectedTagId;
+        })
+        .toList()
       ..sort((a, b) {
         // Sort by priority (urgent first), then by creation date
         final priorityDiff = b.priority.value.compareTo(a.priority.value);
@@ -45,7 +83,10 @@ class ShoppingViewModel extends ChangeNotifier {
 
   /// Get purchased items (history section)
   List<ShoppingItemModel> get purchasedItems {
-    return _items.where((item) => item.isPurchased).toList()
+    return _items
+        .where((item) => item.isPurchased)
+        .where((item) => _selectedTagId == null || item.tagId == _selectedTagId)
+        .toList()
       ..sort((a, b) {
         // Sort by purchase date (newest first)
         final aDate = a.purchaseDate ?? DateTime(1970);

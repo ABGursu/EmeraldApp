@@ -18,6 +18,20 @@ class BalanceScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BalanceViewModel>(
       builder: (context, vm, _) {
+        TagModel? selectedTag;
+        if (vm.selectedTagId != null) {
+          for (final t in vm.tags) {
+            if (t.id == vm.selectedTagId) {
+              selectedTag = t;
+              break;
+            }
+          }
+        }
+
+        final grouped = vm.groupedByDate;
+        final isTagFilteredEmpty =
+            vm.selectedTagId != null && grouped.isEmpty;
+
         return Scaffold(
           appBar: AppBar(
             title: const Text('Balance Sheet'),
@@ -113,42 +127,13 @@ class BalanceScreen extends StatelessWidget {
                   children: [
                     _CurrentBalanceCard(balance: vm.currentBalance),
                     _BudgetOverviewCard(vm: vm),
-                    // Tag Search Bar
-                    if (vm.tags.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search tags...',
-                            prefixIcon: const Icon(Icons.search),
-                            suffixIcon: vm.tagSearchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () => vm.setTagSearchQuery(''),
-                                  )
-                                : null,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onChanged: (value) => vm.setTagSearchQuery(value),
-                        ),
-                      ),
-                      // Quick Filter Bar
-                      QuickFilterBar<TagModel>(
-                        items: vm.filteredTags,
-                        selectedItem: vm.selectedTagId != null
-                            ? vm.filteredTags.firstWhere(
-                                (t) => t.id == vm.selectedTagId,
-                                orElse: () => vm.filteredTags.isNotEmpty
-                                    ? vm.filteredTags.first
-                                    : vm.tags.firstWhere(
-                                        (t) => t.id == vm.selectedTagId,
-                                        orElse: () => vm.tags.first,
-                                      ),
-                              )
-                            : null,
+                    // Tag filter chips (horizontal scroll)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: QuickFilterBar<TagModel>(
+                        items: vm.tags,
+                        selectedItem: selectedTag,
                         onItemSelected: (tag) {
                           vm.setSelectedTag(tag?.id);
                         },
@@ -165,18 +150,44 @@ class BalanceScreen extends StatelessWidget {
                         getItemId: (tag) => tag.id,
                         getItemName: (tag) => tag.name,
                         getItemColor: (tag) => tag.colorValue,
+                        allOptionLabel: 'All',
                       ),
-                    ],
+                    ),
                     Expanded(
-                      child: _TransactionList(
-                        grouped: vm.groupedByDate,
-                        tags: vm.tags
-                            .map((t) => ColorCodedItem(
-                                  id: t.id,
-                                  name: t.name,
-                                  colorValue: t.colorValue,
-                                ))
-                            .toList(),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                        child: isTagFilteredEmpty
+                            ? Center(
+                                key: ValueKey(
+                                    'no-${vm.selectedTagId ?? "all"}'),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Text(
+                                    'No items found for this tag',
+                                    textAlign: TextAlign.center,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ),
+                              )
+                            : KeyedSubtree(
+                                key: ValueKey(
+                                    'tx-${vm.selectedTagId ?? "all"}'),
+                                child: _TransactionList(
+                                  grouped: grouped,
+                                  tags: vm.tags
+                                      .map((t) => ColorCodedItem(
+                                            id: t.id,
+                                            name: t.name,
+                                            colorValue: t.colorValue,
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
                       ),
                     ),
                   ],
