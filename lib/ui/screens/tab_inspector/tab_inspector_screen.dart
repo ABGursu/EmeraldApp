@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -33,7 +35,12 @@ class TabInspectorScreen extends StatelessWidget {
       builder: (context, vm, _) {
         final open = vm.openItems;
         final done = vm.doneItems;
-        final bottomSafe = MediaQuery.of(context).viewPadding.bottom;
+        final mq = MediaQuery.of(context);
+        // Use max so gesture / 3-button nav bar is respected when one of the insets is 0.
+        final bottomSafe = math.max(
+          mq.padding.bottom,
+          mq.viewPadding.bottom,
+        );
 
         return Scaffold(
           appBar: AppBar(
@@ -117,34 +124,44 @@ class TabInspectorScreen extends StatelessWidget {
                       ),
                     ),
                     if (done.isNotEmpty)
-                      Material(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-                        child: ExpansionTile(
-                          initiallyExpanded: false,
-                          title: Text(
-                            'Reviewed (${done.length})',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          children: [
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              padding: EdgeInsets.fromLTRB(8, 0, 8, 16 + bottomSafe),
-                              itemCount: done.length,
-                              itemBuilder: (context, index) {
-                                final item = done[index];
-                                return _TabCard(
-                                  key: ValueKey(item.id),
-                                  item: item,
-                                  onOpen: () => _openLink(context, item.url),
-                                  onDoneChanged: (v) => vm.setDone(item.id, v ?? false),
-                                  onDelete: () => vm.deleteItem(item.id),
-                                );
-                              },
+                      SafeArea(
+                        top: false,
+                        left: false,
+                        right: false,
+                        child: Material(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.4),
+                          child: ExpansionTile(
+                            initiallyExpanded: false,
+                            title: Text(
+                              'Reviewed (${done.length})',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                          ],
+                            children: [
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                // Bottom safe inset is applied by SafeArea; keep inner spacing only.
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+                                itemCount: done.length,
+                                itemBuilder: (context, index) {
+                                  final item = done[index];
+                                  return _TabCard(
+                                    key: ValueKey(item.id),
+                                    item: item,
+                                    onOpen: () => _openLink(context, item.url),
+                                    onDoneChanged: (v) =>
+                                        vm.setDone(item.id, v ?? false),
+                                    onDelete: () => vm.deleteItem(item.id),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                   ],
