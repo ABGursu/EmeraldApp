@@ -64,11 +64,6 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   List<TagModel> get tagsForBalance =>
       _tags.where((t) => t.showInBalance).toList();
 
-  /// Tags shown in Balance/Shopping **shared** tag filter (both modules enabled).
-  /// If a tag is hidden from either side, it does not appear in the other module's filter.
-  List<TagModel> get tagsForSharedFilter =>
-      _tags.where((t) => t.showInBalance && t.showInShopping).toList();
-
   /// Filtered tags based on search query (balance-visible only)
   List<TagModel> get filteredTags {
     final base = tagsForBalance;
@@ -258,8 +253,7 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
   Future<void> loadTags() async {
     _tags = await _repository.getAllTags();
     if (_selectedTagIds.isNotEmpty) {
-      final filterIds =
-          tagsForSharedFilter.map((t) => t.id).toSet();
+      final filterIds = tagsForBalance.map((t) => t.id).toSet();
       final retained = _selectedTagIds.where(filterIds.contains).toSet();
       if (retained.length != _selectedTagIds.length) {
         _selectedTagIds = retained;
@@ -304,6 +298,13 @@ class BalanceViewModel extends ChangeNotifier with DateRangePersistence {
     _groupedByDateCache = null; // Invalidate cache when transactions change
     _loading = false;
     notifyListeners();
+  }
+
+  /// Reads a transaction from the database by id. Unaffected by the in-memory
+  /// date range filter applied to [transactions].
+  Future<TransactionModel?> getTransactionById(String? id) {
+    if (id == null) return Future<TransactionModel?>.value(null);
+    return _repository.getTransactionById(id);
   }
 
   Future<Directory> _getExportDir() async {

@@ -120,7 +120,7 @@ class BalanceScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 8),
                       child: TagFilterDropdown(
-                        tags: vm.tagsForSharedFilter,
+                        tags: vm.tagsForBalance,
                         selectedTagIds: vm.selectedTagIds,
                         onSelectionChanged: vm.setSelectedTags,
                         onTagLongPress: (tag) {

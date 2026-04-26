@@ -76,6 +76,19 @@ class SqlBalanceRepository implements IBalanceRepository {
   }
 
   @override
+  Future<TransactionModel?> getTransactionById(String id) async {
+    final db = await _dbHelper.database;
+    final result = await db.query(
+      'transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return TransactionModel.fromMap(result.first);
+  }
+
+  @override
   Future<void> setBudget(String monthYear, double amount) async {
     final db = await _dbHelper.database;
     // Check if budget exists for this month

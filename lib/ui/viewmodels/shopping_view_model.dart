@@ -12,6 +12,61 @@ import '../../data/repositories/sql_shopping_repository.dart';
 import '../../utils/id_generator.dart';
 import 'balance_view_model.dart';
 
+/// Captures shopping row + balance transactions before a delete, for undo.
+class ShoppingDeleteUndoSnapshot {
+  ShoppingDeleteUndoSnapshot({
+    required this.item,
+    this.rentTx,
+    this.purchaseTx,
+    this.purchaseWasDeletedByDialog = false,
+  });
+
+  final ShoppingItemModel item;
+  final TransactionModel? rentTx;
+  final TransactionModel? purchaseTx;
+  final bool purchaseWasDeletedByDialog;
+
+  /// Call before any delete or dialog that removes linked transactions.
+  /// Uses DB lookup so linked rent/purchase rows are found even when
+  /// [BalanceViewModel.transactions] is date-filtered.
+  static Future<ShoppingDeleteUndoSnapshot> captureAsync(
+    ShoppingItemModel item,
+    BalanceViewModel balanceVm,
+  ) async {
+    return ShoppingDeleteUndoSnapshot(
+      item: item,
+      rentTx: await balanceVm.getTransactionById(item.linkedRentTransactionId),
+      purchaseTx:
+          await balanceVm.getTransactionById(item.linkedTransactionId),
+    );
+  }
+
+  ShoppingDeleteUndoSnapshot copyWith({
+    bool? purchaseWasDeletedByDialog,
+  }) {
+    return ShoppingDeleteUndoSnapshot(
+      item: item,
+      rentTx: rentTx,
+      purchaseTx: purchaseTx,
+      purchaseWasDeletedByDialog:
+          purchaseWasDeletedByDialog ?? this.purchaseWasDeletedByDialog,
+    );
+  }
+}
+
+Future<String> _recreateTransactionFromSnapshot(
+  BalanceViewModel balanceVm,
+  TransactionModel tx,
+) {
+  return balanceVm.addTransaction(
+    amount: tx.amount.abs(),
+    isExpense: tx.amount < 0,
+    date: tx.date,
+    tagId: tx.tagId,
+    note: tx.note,
+  );
+}
+
 class ShoppingViewModel extends ChangeNotifier {
   ShoppingViewModel({
     IShoppingRepository? repository,
@@ -39,10 +94,6 @@ class ShoppingViewModel extends ChangeNotifier {
   /// Tags visible in Shopping List (filter chips and item tag picker).
   List<TagModel> get tagsForShopping =>
       _tags.where((t) => t.showInShopping).toList();
-
-  /// Shared tag filter list: both Balance and Shopping must be enabled.
-  List<TagModel> get tagsForSharedFilter =>
-      _tags.where((t) => t.showInBalance && t.showInShopping).toList();
 
   int get needWantSegmentIndex => _needWantSegmentIndex;
   bool get isLoading => _loading;
@@ -167,8 +218,7 @@ class ShoppingViewModel extends ChangeNotifier {
   Future<void> loadTags() async {
     _tags = await _balanceRepository.getAllTags();
     if (_selectedTagIds.isNotEmpty) {
-      final filterIds =
-          tagsForSharedFilter.map((t) => t.id).toSet();
+      final filterIds = tagsForShopping.map((t) => t.id).toSet();
       _selectedTagIds = _selectedTagIds.where(filterIds.contains).toSet();
     }
     notifyListeners();
@@ -381,6 +431,43 @@ class ShoppingViewModel extends ChangeNotifier {
     }
 
     await _repository.deleteItem(id);
+    await loadItems();
+  }
+
+  /// Restores a shopping row and any balance transactions removed by [deleteItem]
+  /// or the pre-delete expense dialog. Requires a [ShoppingDeleteUndoSnapshot]
+  /// captured before those operations.
+  Future<void> restoreShoppingItemAfterDelete({
+    required ShoppingDeleteUndoSnapshot snapshot,
+    required BalanceViewModel balanceVm,
+  }) async {
+    final needsRestorePurchase = snapshot.purchaseTx != null &&
+        (snapshot.purchaseWasDeletedByDialog || _autoDeleteExpense);
+
+    String? newRentId;
+    if (snapshot.rentTx != null) {
+      newRentId = await _recreateTransactionFromSnapshot(
+        balanceVm,
+        snapshot.rentTx!,
+      );
+    }
+
+    String? newPurchaseId;
+    if (needsRestorePurchase && snapshot.purchaseTx != null) {
+      newPurchaseId = await _recreateTransactionFromSnapshot(
+        balanceVm,
+        snapshot.purchaseTx!,
+      );
+    }
+
+    final restored = snapshot.item.copyWith(
+      linkedRentTransactionId:
+          newRentId ?? snapshot.item.linkedRentTransactionId,
+      linkedTransactionId:
+          newPurchaseId ?? snapshot.item.linkedTransactionId,
+    );
+
+    await _repository.createItem(restored);
     await loadItems();
   }
 

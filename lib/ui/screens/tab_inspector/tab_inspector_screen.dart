@@ -11,6 +11,31 @@ import 'add_tab_item_sheet.dart';
 class TabInspectorScreen extends StatelessWidget {
   const TabInspectorScreen({super.key});
 
+  Future<void> _editItem(
+    BuildContext context,
+    TabInspectorViewModel vm,
+    TabInspectorItem item,
+  ) async {
+    final result = await showModalBottomSheet<({String title, String url})>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddTabItemSheet(editingItem: item),
+    );
+    if (result == null || !context.mounted) return;
+    final ok = await vm.updateItem(
+      id: item.id,
+      titleInput: result.title,
+      urlInput: result.url,
+    );
+    if (context.mounted && !ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('That does not look like a valid http(s) URL'),
+        ),
+      );
+    }
+  }
+
   Future<void> _openLink(BuildContext context, String url) async {
     final uri = Uri.tryParse(url);
     if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
@@ -115,6 +140,7 @@ class TabInspectorScreen extends StatelessWidget {
                                         reorderableIndex: index,
                                         onOpen: () => _openLink(context, item.url),
                                         onDoneChanged: (v) => vm.setDone(item.id, v ?? false),
+                                        onEdit: () => _editItem(context, vm, item),
                                         onDelete: () => vm.deleteItem(item.id),
                                       );
                                     },
@@ -156,6 +182,7 @@ class TabInspectorScreen extends StatelessWidget {
                                     onOpen: () => _openLink(context, item.url),
                                     onDoneChanged: (v) =>
                                         vm.setDone(item.id, v ?? false),
+                                    onEdit: () => _editItem(context, vm, item),
                                     onDelete: () => vm.deleteItem(item.id),
                                   );
                                 },
@@ -200,6 +227,7 @@ class _TabCard extends StatelessWidget {
     required this.item,
     required this.onOpen,
     required this.onDoneChanged,
+    required this.onEdit,
     required this.onDelete,
     this.reorderableIndex,
   });
@@ -207,6 +235,7 @@ class _TabCard extends StatelessWidget {
   final TabInspectorItem item;
   final VoidCallback onOpen;
   final ValueChanged<bool?> onDoneChanged;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
   /// When set, shows a drag handle for [ReorderableListView].
   final int? reorderableIndex;
@@ -316,9 +345,23 @@ class _TabCard extends StatelessWidget {
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, size: 20),
                 onSelected: (value) {
-                  if (value == 'delete') onDelete();
+                  if (value == 'edit') {
+                    onEdit();
+                  } else if (value == 'delete') {
+                    onDelete();
+                  }
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 20),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'delete',
                     child: Row(

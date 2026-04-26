@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// English-only form: title + URL (rapid capture).
+import '../../../data/models/tab_inspector_item_model.dart';
+
+/// English-only form: title + URL (rapid capture or edit).
 class AddTabItemSheet extends StatefulWidget {
-  const AddTabItemSheet({super.key});
+  const AddTabItemSheet({super.key, this.editingItem});
+
+  /// When set, fields are pre-filled and primary action saves changes.
+  final TabInspectorItem? editingItem;
 
   @override
   State<AddTabItemSheet> createState() => _AddTabItemSheetState();
@@ -12,6 +17,18 @@ class _AddTabItemSheetState extends State<AddTabItemSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _urlController = TextEditingController();
+
+  bool get _isEditing => widget.editingItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.editingItem;
+    if (e != null) {
+      _titleController.text = e.title;
+      _urlController.text = e.url;
+    }
+  }
 
   @override
   void dispose() {
@@ -40,7 +57,7 @@ class _AddTabItemSheetState extends State<AddTabItemSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Save tab for later',
+                    _isEditing ? 'Edit tab' : 'Save tab for later',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   IconButton(
@@ -68,7 +85,7 @@ class _AddTabItemSheetState extends State<AddTabItemSheet> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.url,
-                autofocus: true,
+                autofocus: !_isEditing,
                 validator: (v) {
                   final t = v?.trim() ?? '';
                   if (t.isEmpty) return 'Enter a link';
@@ -86,7 +103,7 @@ class _AddTabItemSheetState extends State<AddTabItemSheet> {
                       url: _urlController.text,
                     ));
                   },
-                  child: const Text('Add'),
+                  child: Text(_isEditing ? 'Save' : 'Add'),
                 ),
               ),
             ],

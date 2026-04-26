@@ -12,6 +12,9 @@ abstract class IBalanceRepository {
   Future<int> deleteTransaction(String id);
   Future<List<TransactionModel>> getTransactions({String? tagId});
 
+  /// Unfiltered single-row read (e.g. undo snapshot; ignores Balance UI date filter).
+  Future<TransactionModel?> getTransactionById(String id);
+
   Future<void> setBudget(String monthYear, double amount);
   Future<double?> getBudget(String monthYear);
 

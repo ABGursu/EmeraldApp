@@ -311,7 +311,7 @@ class _ShoppingListContent extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: TagFilterDropdown(
-            tags: vm.tagsForSharedFilter,
+            tags: vm.tagsForShopping,
             selectedTagIds: vm.selectedTagIds,
             onSelectionChanged: vm.setSelectedTags,
             label: 'Tags',
@@ -373,10 +373,31 @@ class _ShoppingItemTile extends StatelessWidget {
       ),
     );
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: _buildPriorityIndicator(item.priority),
+    return Dismissible(
+      key: ValueKey('shop-${item.id}'),
+      direction: DismissDirection.startToEnd,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.error,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(
+          Icons.delete_outline,
+          color: Theme.of(context).colorScheme.onError,
+        ),
+      ),
+      confirmDismiss: (_) => _confirmAndDeleteShoppingItem(
+        context,
+        item,
+        vm,
+        balanceVm,
+      ),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          leading: _buildPriorityIndicator(item.priority),
         title: Text(
           item.name,
           style: TextStyle(
@@ -506,7 +527,21 @@ class _ShoppingItemTile extends StatelessWidget {
               ),
           ],
         ),
-        onLongPress: () => _showItemOptions(context, item, vm, balanceVm),
+        onLongPress: () {
+          if (isPurchased) {
+            _showEditPurchasedDialog(context, item, vm, balanceVm);
+          } else {
+            showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => ChangeNotifierProvider.value(
+                value: vm,
+                child: AddEditShoppingItemSheet(item: item),
+              ),
+            );
+          }
+        },
+        ),
       ),
     );
   }
@@ -688,113 +723,89 @@ class _ShoppingItemTile extends StatelessWidget {
     }
   }
 
-  void _showItemOptions(
-    BuildContext context,
-    ShoppingItemModel item,
-    ShoppingViewModel vm,
-    BalanceViewModel balanceVm,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit'),
-              onTap: () {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-                if (context.mounted) {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => ChangeNotifierProvider.value(
-                      value: vm,
-                      child: AddEditShoppingItemSheet(item: item),
-                    ),
-                  );
-                }
-              },
-            ),
-            if (item.isPurchased)
-              ListTile(
-                leading: const Icon(Icons.undo),
-                title: const Text('Unpurchase'),
-                onTap: () async {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                  if (context.mounted) {
-                    await _handleUnpurchase(context, item, vm, balanceVm);
-                  }
-                },
-              ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () async {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-                if (context.mounted) {
-                  await _showDeleteConfirmation(context, item, vm, balanceVm);
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showDeleteConfirmation(
+  /// Deletes the item (and optionally its linked expense) then shows a 5-second
+  /// floating SnackBar with an Undo action. Always returns **false** so the
+  /// [Dismissible] does not try to animate away a widget that was already
+  /// removed from the list by [ShoppingViewModel.loadItems].
+  Future<bool> _confirmAndDeleteShoppingItem(
     BuildContext context,
     ShoppingItemModel item,
     ShoppingViewModel vm,
     BalanceViewModel balanceVm,
   ) async {
+    var snapshot =
+        await ShoppingDeleteUndoSnapshot.captureAsync(item, balanceVm);
+    if (!context.mounted) return false;
+
     final hasLinkedTransaction = item.linkedTransactionId != null;
     final shouldDeleteExpense = hasLinkedTransaction && !vm.autoDeleteExpense;
 
     if (shouldDeleteExpense) {
-      // Show confirmation dialog
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (ctx) => AlertDialog(
           title: const Text('Delete Item'),
           content: const Text(
             'Do you want to delete the associated expense record as well?',
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(ctx, false),
               child: const Text('No'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(ctx, true),
               child: const Text('Yes'),
             ),
           ],
         ),
       );
 
-      if (confirmed == true && context.mounted) {
-        // Delete the expense
+      if (!context.mounted) return false;
+      if (confirmed == true) {
         await balanceVm.deleteTransaction(item.linkedTransactionId!);
+        snapshot = snapshot.copyWith(purchaseWasDeletedByDialog: true);
       }
     }
 
-    if (context.mounted) {
-      await vm.deleteItem(item.id, balanceVm: balanceVm);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Item "${item.name}" deleted')),
-        );
-      }
-    }
+    if (!context.mounted) return false;
+
+    // Grab scaffold messenger & safe-area before the delete triggers a rebuild.
+    final messenger = ScaffoldMessenger.of(context);
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
+    await vm.deleteItem(item.id, balanceVm: balanceVm);
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        margin: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
+        content: const Text('Item deleted. Want to undo?'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            try {
+              await vm.restoreShoppingItemAfterDelete(
+                snapshot: snapshot,
+                balanceVm: balanceVm,
+              );
+            } catch (_) {
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Could not undo. Please re-add the item.'),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
+
+    // Return false: the item is already removed from the list by loadItems(),
+    // so the Dismissible must not try to animate it away a second time.
+    return false;
   }
 }
 

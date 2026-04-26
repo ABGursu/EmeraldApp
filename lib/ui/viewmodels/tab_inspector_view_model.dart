@@ -87,6 +87,63 @@ class TabInspectorViewModel extends ChangeNotifier {
     await loadItems();
   }
 
+  /// Updates title and URL. Re-fetches preview when the URL changes.
+  Future<bool> updateItem({
+    required String id,
+    required String titleInput,
+    required String urlInput,
+  }) async {
+    final uri = LinkPreviewService.normalizeUserUrl(urlInput);
+    if (uri == null) return false;
+
+    final current = await _repository.getById(id);
+    if (current == null) return false;
+
+    final manualTitle = titleInput.trim();
+    final hadManualTitle = manualTitle.isNotEmpty;
+    final newUrl = uri.toString();
+    final urlChanged = newUrl != current.url;
+
+    final provisionalTitle = hadManualTitle
+        ? manualTitle
+        : LinkPreviewService.fallbackTitle(uri);
+
+    final updated = current.copyWith(
+      title: provisionalTitle,
+      url: newUrl,
+      previewImageUrl: urlChanged ? null : current.previewImageUrl,
+    );
+
+    await _repository.update(updated);
+    await loadItems();
+
+    if (urlChanged) {
+      unawaited(_enrichAfterEdit(id, hadManualTitle));
+    }
+    return true;
+  }
+
+  Future<void> _enrichAfterEdit(String id, bool hadManualTitle) async {
+    final current = await _repository.getById(id);
+    if (current == null) return;
+
+    final preview = await LinkPreviewService.fetchPreview(Uri.parse(current.url));
+
+    final title = hadManualTitle
+        ? current.title
+        : (preview.title?.isNotEmpty == true
+            ? preview.title!
+            : LinkPreviewService.fallbackTitle(Uri.parse(current.url)));
+
+    final merged = current.copyWith(
+      title: title,
+      previewImageUrl: preview.imageUrl ?? current.previewImageUrl,
+    );
+
+    await _repository.update(merged);
+    await loadItems();
+  }
+
   Future<void> setDone(String id, bool done) async {
     TabInspectorItem? item;
     for (final e in _items) {
