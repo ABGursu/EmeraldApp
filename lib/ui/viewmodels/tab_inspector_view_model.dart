@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../data/models/tab_inspector_item_model.dart';
 import '../../data/repositories/i_tab_inspector_repository.dart';
@@ -160,6 +162,44 @@ class TabInspectorViewModel extends ChangeNotifier {
   Future<void> deleteItem(String id) async {
     await _repository.delete(id);
     await loadItems();
+  }
+
+  Future<String> exportToTxt() async {
+    final directory = await _getExportDir();
+    final now = DateTime.now();
+    final fileName =
+        'tab_inspector_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.txt';
+    final file = File('${directory.path}/$fileName');
+
+    final buffer = StringBuffer();
+    final latestItems = await _repository.getAll();
+    for (final item in latestItems) {
+      final title = item.title.trim().isEmpty ? item.url : item.title.trim();
+      // Keep raw http(s) URL in plain text so readers can auto-detect as clickable.
+      buffer.writeln('$title - ${item.url}');
+    }
+
+    await file.writeAsString(buffer.toString());
+    return file.path;
+  }
+
+  Future<Directory> _getExportDir() async {
+    const preferredPath = '/storage/emulated/0/Documents/EmeraldApp';
+    Directory dir = Directory(preferredPath);
+    try {
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return dir;
+    } catch (_) {
+      final externalDir = await getExternalStorageDirectory();
+      final base = externalDir ?? await getApplicationDocumentsDirectory();
+      dir = Directory('${base.path}/Documents/EmeraldApp');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return dir;
+    }
   }
 
   /// Persists order for open items only (0 .. n-1).

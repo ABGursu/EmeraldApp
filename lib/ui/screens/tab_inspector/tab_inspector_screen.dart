@@ -74,6 +74,20 @@ class TabInspectorScreen extends StatelessWidget {
               icon: const Icon(Icons.arrow_back),
               onPressed: () => Navigator.of(context).pop(),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.upload_file),
+                tooltip: 'Export links',
+                onPressed: () async {
+                  final path = await vm.exportToTxt();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Exported to $path')),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
           body: vm.isLoading && vm.items.isEmpty
               ? const Center(child: CircularProgressIndicator())
